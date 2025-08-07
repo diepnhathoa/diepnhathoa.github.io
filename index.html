@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Marketing AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Công cụ Marketing AI</h1>
+        </header>
+
+        <nav class="tabs-container">
+            <button class="tab-button active" id="tab-ads">Phân tích Ads</button>
+            <button class="tab-button" id="tab-content">Sáng tạo Content</button>
+            <button class="tab-button" id="tab-chat">Trò chuyện AI</button>
+        </nav>
+
+        <main>
+            <div id="tab-ads-content" class="tab-content active">
+                <h2>Phân Tích Quảng Cáo Digital Ads</h2>
+                <p>Sử dụng AI để phân tích chiến lược quảng cáo của đối thủ và nhận các đề xuất tối ưu.</p>
+                
+                <form id="ads-analyzer-form">
+                    <div class="form-group">
+                        <label for="ad-title">Tiêu đề quảng cáo của đối thủ:</label>
+                        <textarea id="ad-title" placeholder="Dán tiêu đề quảng cáo ở đây..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ad-copy">Mô tả quảng cáo của đối thủ:</label>
+                        <textarea id="ad-copy" placeholder="Dán mô tả quảng cáo ở đây..." required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="landing-page-url">URL Trang đích:</label>
+                        <input type="url" id="landing-page-url" placeholder="https://..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="target-keywords">Từ khóa mục tiêu (cách nhau bằng dấu phẩy):</label>
+                        <textarea id="target-keywords" placeholder="marketing online, quảng cáo facebook,..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" id="ads-analyze-button">Phân Tích</button>
+                </form>
+                
+                <div id="ads-loading-spinner" class="hidden">Đang phân tích...</div>
+                
+                <div id="ads-results-container" class="hidden">
+                    <h2>Kết Quả Phân Tích</h2>
+                    <div id="ads-results-content"></div>
+                </div>
+            </div>
+
+            <div id="tab-content-content" class="tab-content hidden">
+                <h2>Sáng tạo Content & Hình ảnh</h2>
+                <p>Sử dụng AI để tạo các bài viết và hình ảnh độc đáo cho chiến dịch marketing của anh.</p>
+
+                <nav class="sub-tabs-container">
+                    <button class="sub-tab-button active" id="sub-tab-post">Tạo Bài Đăng</button>
+                    <button class="sub-tab-button" id="sub-tab-image">Tạo Hình Ảnh</button>
+                </nav>
+
+                <div id="sub-tab-post-content" class="sub-tab-content active">
+                    <form id="post-generator-form">
+                        <div class="form-group">
+                            <label for="post-image-upload">Hình ảnh sản phẩm (tùy chọn, có thể dán ảnh vào đây):</label>
+                            <input type="file" id="post-image-upload" accept="image/*" multiple class="custom-file-input"/>
+                            <div id="post-image-preview-container" class="image-preview-container hidden"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="post-prompt">Mô tả sản phẩm hoặc yêu cầu:</label>
+                            <textarea id="post-prompt" placeholder="Ví dụ: Bàn phím cơ dành cho game thủ, thiết kế nhỏ gọn, đèn LED RGB..." required></textarea>
+                        </div>
+                        <button type="submit" id="post-create-button">Tạo Bài Đăng</button>
+                    </form>
+
+                    <div id="post-loading-spinner" class="hidden">Đang sáng tạo...</div>
+                    <div id="post-results-container" class="hidden">
+                        <h2>Bài viết đề xuất</h2>
+                        <div id="post-output" class="content-output"></div>
+                    </div>
+                </div>
+                
+                <div id="sub-tab-image-content" class="sub-tab-content hidden">
+                    <form id="image-generator-form">
+                        <div class="form-group">
+                            <label for="image-upload">Hình ảnh tham khảo (tùy chọn, có thể dán ảnh vào đây):</label>
+                            <input type="file" id="image-upload" accept="image/*" multiple class="custom-file-input"/>
+                            <div id="image-preview-container" class="image-preview-container hidden"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="image-prompt">Mô tả hình ảnh anh muốn tạo:</label>
+                            <textarea id="image-prompt" placeholder="Ví dụ: Một con rồng máy đang bay trên thành phố cyberpunk" required></textarea>
+                        </div>
+                        <button type="submit" id="image-create-button">Tạo Hình Ảnh</button>
+                    </form>
+
+                    <div id="image-loading-spinner" class="hidden">Đang tạo hình ảnh...</div>
+                    <div id="image-results-container" class="hidden">
+                        <h2>Hình ảnh được tạo</h2>
+                        <div id="image-output"></div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div id="tab-chat-content" class="tab-content hidden">
+                <h2>Trợ lý AI của bạn</h2>
+                <p>Chatbot này có thể giúp anh tìm kiếm thông tin, viết nội dung và trả lời mọi câu hỏi.</p>
+
+                <div id="chat-login-container">
+                    <form id="chat-login-form">
+                        <div class="form-group">
+                            <label for="username">Nhập tên của anh để bắt đầu:</label>
+                            <input type="text" id="username" placeholder="Ví dụ: Diệp Nhật Hòa" required>
+                        </div>
+                        <button type="submit" id="chat-login-button">Bắt đầu trò chuyện</button>
+                    </form>
+                </div>
+                
+                <div id="chat-interface" class="hidden">
+                    <div id="chat-history"></div>
+                    <form id="chat-form">
+                        <div class="form-group chat-input-group">
+                            <textarea id="chat-message-input" placeholder="Nhập tin nhắn của anh..." required></textarea>
+                            <button type="submit">Gửi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

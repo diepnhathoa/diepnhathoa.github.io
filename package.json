@@ -1,0 +1,16 @@
+{
+  "name": "ai-marketing-analyzer",
+  "version": "1.0.0",
+  "description": "A serverless function for AI marketing analysis.",
+  "main": "api/analyze.js",
+  "dependencies": {
+    "@upstash/redis": "^1.29.0",
+    "cookie": "^0.6.0",
+    "formidable": "^3.5.1",
+    "openai": "^4.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "next": "^14.2.5"
+  }
+}
