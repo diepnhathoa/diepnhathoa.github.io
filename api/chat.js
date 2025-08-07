@@ -7,6 +7,16 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
+    // Thêm các headers cho CORS
+    res.setHeader('Access-Control-Allow-Origin', 'https://diepnhathoa.github.io');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Xử lý yêu cầu OPTIONS (yêu cầu kiểm tra của trình duyệt)
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
@@ -22,26 +32,29 @@ export default async function handler(req, res) {
     });
     
     try {
+        // Lấy lịch sử chat từ Redis
         const historyKey = `chat_history:${userId}`;
         const chatHistory = await redis.lrange(historyKey, 0, -1);
-        const parsedHistory = chatHistory.map(item => JSON.parse(item));
-
+        const parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse(); // Đảo ngược để thứ tự đúng
+        
+        // Chuẩn bị tin nhắn cho OpenAI API
         const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
         messages.push({ role: 'user', content: message });
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-4o", // Sử dụng model mạnh nhất cho chat
             messages: messages,
             max_tokens: 1500,
         });
 
         const aiResponse = completion.choices[0].message.content;
 
+        // Lưu tin nhắn mới và phản hồi của AI vào Redis
         const newMessage = { role: 'user', content: message };
         const newAiResponse = { role: 'assistant', content: aiResponse };
 
         await redis.lpush(historyKey, JSON.stringify(newAiResponse), JSON.stringify(newMessage));
-        await redis.ltrim(historyKey, 0, 99);
+        await redis.ltrim(historyKey, 0, 99); // Giới hạn lịch sử chat để tiết kiệm chi phí
 
         return res.status(200).json({ success: true, response: aiResponse });
 
