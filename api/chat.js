@@ -32,11 +32,23 @@ export default async function handler(req, res) {
     });
     
     try {
-        // Lấy lịch sử chat từ Redis
         const historyKey = `chat_history:${userId}`;
         const chatHistory = await redis.lrange(historyKey, 0, -1);
-        const parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
+        let parsedHistory = [];
         
+        // Xử lý lỗi khi dữ liệu Redis không hợp lệ
+        if (chatHistory && chatHistory.length > 0) {
+            try {
+                parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
+            } catch (e) {
+                // Nếu dữ liệu bị lỗi, xóa lịch sử và bắt đầu lại
+                await redis.del(historyKey);
+                console.error('Lỗi khi phân tích lịch sử chat, đã xóa lịch sử cũ.');
+                // Giữ lại parsedHistory là một mảng rỗng để không crash
+                parsedHistory = [];
+            }
+        }
+
         // Chuẩn bị tin nhắn cho OpenAI API
         const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
         messages.push({ role: 'user', content: message });
@@ -53,7 +65,6 @@ export default async function handler(req, res) {
         const newMessage = { role: 'user', content: message };
         const newAiResponse = { role: 'assistant', content: aiResponse };
 
-        // Đảm bảo dữ liệu được lưu dưới dạng chuỗi JSON hợp lệ
         await redis.lpush(historyKey, JSON.stringify(newAiResponse), JSON.stringify(newMessage));
         await redis.ltrim(historyKey, 0, 99);
 
