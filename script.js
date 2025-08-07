@@ -65,25 +65,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // === Tab Switching Logic ===
-    function switchTab(tabToShow, tabToHide1, tabToHide2, buttonToActivate, buttonToDeactivate1, buttonToDeactivate2) {
-        tabToHide1.classList.add('hidden');
-        tabToHide2.classList.add('hidden');
+    function switchTab(tabToShow, buttonToActivate) {
+        // Ẩn tất cả các tab nội dung
+        tabAdsContent.classList.add('hidden');
+        tabContentContent.classList.add('hidden');
+        tabChatContent.classList.add('hidden');
+        
+        // Gỡ trạng thái active của tất cả các nút
+        tabAdsButton.classList.remove('active');
+        tabContentButton.classList.remove('active');
+        tabChatButton.classList.remove('active');
+        
+        // Hiển thị tab được chọn và kích hoạt nút tương ứng
         tabToShow.classList.remove('hidden');
-        buttonToDeactivate1.classList.remove('active');
-        buttonToDeactivate2.classList.remove('active');
         buttonToActivate.classList.add('active');
     }
 
     tabAdsButton.addEventListener('click', () => {
-        switchTab(tabAdsContent, tabContentContent, tabChatContent, tabAdsButton, tabContentButton, tabChatButton);
+        switchTab(tabAdsContent, tabAdsButton);
     });
 
     tabContentButton.addEventListener('click', () => {
-        switchTab(tabContentContent, tabAdsContent, tabChatContent, tabContentButton, tabAdsButton, tabChatButton);
+        switchTab(tabContentContent, tabContentButton);
     });
 
     tabChatButton.addEventListener('click', () => {
-        switchTab(tabChatContent, tabAdsContent, tabContentContent, tabChatButton, tabAdsButton, tabContentButton);
+        switchTab(tabChatContent, tabChatButton);
         if (currentUserId) {
             chatLoginContainer.classList.add('hidden');
             chatInterface.classList.remove('hidden');
@@ -92,11 +99,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     subTabPostButton.addEventListener('click', () => {
-        switchTab(subTabPostContent, subTabImageContent, subTabPostButton, subTabImageButton);
+        subTabPostContent.classList.remove('hidden');
+        subTabImageContent.classList.add('hidden');
+        subTabPostButton.classList.add('active');
+        subTabImageButton.classList.remove('active');
     });
 
     subTabImageButton.addEventListener('click', () => {
-        switchTab(subTabImageContent, subTabPostContent, subTabImageButton, subTabPostButton);
+        subTabImageContent.classList.remove('hidden');
+        subTabPostContent.classList.add('hidden');
+        subTabImageButton.classList.add('active');
+        subTabPostButton.classList.remove('active');
     });
 
     // === Helper Functions ===
@@ -165,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Function to handle markdown links
     function formatTextWithLinks(text) {
         const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
         return text.replace(linkRegex, `<a href="$2" target="_blank">$1</a>`);
