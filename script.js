@@ -6,9 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Main Tabs
     const tabAdsButton = document.getElementById('tab-ads');
     const tabContentButton = document.getElementById('tab-content');
+    const tabChatButton = document.getElementById('tab-chat');
+    
     const tabAdsContent = document.getElementById('tab-ads-content');
     const tabContentContent = document.getElementById('tab-content-content');
-    const tabChatButton = document.getElementById('tab-chat');
     const tabChatContent = document.getElementById('tab-chat-content');
 
     // Sub-Tabs for Content
@@ -64,30 +65,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // === Tab Switching Logic ===
-    function switchTab(tabToShow, tabToHide, buttonToActivate, buttonToDeactivate) {
-        tabToHide.classList.add('hidden');
+    function switchTab(tabToShow, tabToHide1, tabToHide2, buttonToActivate, buttonToDeactivate1, buttonToDeactivate2) {
+        tabToHide1.classList.add('hidden');
+        tabToHide2.classList.add('hidden');
         tabToShow.classList.remove('hidden');
-        buttonToDeactivate.classList.remove('active');
+        buttonToDeactivate1.classList.remove('active');
+        buttonToDeactivate2.classList.remove('active');
         buttonToActivate.classList.add('active');
     }
 
     tabAdsButton.addEventListener('click', () => {
-        switchTab(tabAdsContent, tabContentContent, tabAdsButton, tabContentButton);
+        switchTab(tabAdsContent, tabContentContent, tabChatContent, tabAdsButton, tabContentButton, tabChatButton);
     });
 
     tabContentButton.addEventListener('click', () => {
-        switchTab(tabContentContent, tabAdsContent, tabContentButton, tabAdsButton);
+        switchTab(tabContentContent, tabAdsContent, tabChatContent, tabContentButton, tabAdsButton, tabChatButton);
     });
 
     tabChatButton.addEventListener('click', () => {
-        // Fix for the tab switching bug
-        tabAdsContent.classList.add('hidden');
-        tabContentContent.classList.add('hidden');
-        tabChatContent.classList.remove('hidden');
-        tabAdsButton.classList.remove('active');
-        tabContentButton.classList.remove('active');
-        tabChatButton.classList.add('active');
-
+        switchTab(tabChatContent, tabAdsContent, tabContentContent, tabChatButton, tabAdsButton, tabContentButton);
         if (currentUserId) {
             chatLoginContainer.classList.add('hidden');
             chatInterface.classList.remove('hidden');
@@ -169,10 +165,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Function to handle markdown links
+    function formatTextWithLinks(text) {
+        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        return text.replace(linkRegex, `<a href="$2" target="_blank">$1</a>`);
+    }
+
     function appendChatMessage(role, message) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('chat-message', role);
-        messageElement.innerText = message;
+        messageElement.innerHTML = formatTextWithLinks(message);
         chatHistoryDiv.appendChild(messageElement);
         chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight; // Auto-scroll
     }
