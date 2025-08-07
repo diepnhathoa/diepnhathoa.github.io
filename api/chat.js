@@ -7,12 +7,10 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-    // Thêm các headers cho CORS
     res.setHeader('Access-Control-Allow-Origin', 'https://diepnhathoa.github.io');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Xử lý yêu cầu OPTIONS (yêu cầu kiểm tra của trình duyệt)
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -36,32 +34,32 @@ export default async function handler(req, res) {
         const chatHistory = await redis.lrange(historyKey, 0, -1);
         let parsedHistory = [];
         
-        // Xử lý lỗi khi dữ liệu Redis không hợp lệ
         if (chatHistory && chatHistory.length > 0) {
             try {
                 parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
             } catch (e) {
-                // Nếu dữ liệu bị lỗi, xóa lịch sử và bắt đầu lại
                 await redis.del(historyKey);
-                console.error('Lỗi khi phân tích lịch sử chat, đã xóa lịch sử cũ.');
-                // Giữ lại parsedHistory là một mảng rỗng để không crash
                 parsedHistory = [];
             }
         }
 
-        // Chuẩn bị tin nhắn cho OpenAI API
         const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
         messages.push({ role: 'user', content: message });
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
-            messages: messages,
+            messages: [
+                {
+                    role: "system",
+                    content: `Bạn là một trợ lý ảo chuyên nghiệp, hữu ích và lịch sự. Dữ liệu của bạn được cập nhật đến tháng 10 năm 2024. Khi người dùng hỏi về thông tin thời gian thực hoặc cần một liên kết, hãy cung cấp một đường link tìm kiếm chính xác và hữu ích trên Google để họ có thể tự tra cứu. Ví dụ: Nếu người dùng hỏi về giá vàng, hãy cung cấp link Google tìm kiếm "giá vàng hôm nay". Luôn trả lời bằng tiếng Việt.`,
+                },
+                ...messages,
+            ],
             max_tokens: 1500,
         });
 
         const aiResponse = completion.choices[0].message.content;
 
-        // Lưu tin nhắn mới và phản hồi của AI vào Redis
         const newMessage = { role: 'user', content: message };
         const newAiResponse = { role: 'assistant', content: aiResponse };
 
