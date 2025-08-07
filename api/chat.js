@@ -35,14 +35,14 @@ export default async function handler(req, res) {
         // Lấy lịch sử chat từ Redis
         const historyKey = `chat_history:${userId}`;
         const chatHistory = await redis.lrange(historyKey, 0, -1);
-        const parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse(); // Đảo ngược để thứ tự đúng
+        const parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
         
         // Chuẩn bị tin nhắn cho OpenAI API
         const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
         messages.push({ role: 'user', content: message });
 
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o", // Sử dụng model mạnh nhất cho chat
+            model: "gpt-4o",
             messages: messages,
             max_tokens: 1500,
         });
@@ -53,8 +53,9 @@ export default async function handler(req, res) {
         const newMessage = { role: 'user', content: message };
         const newAiResponse = { role: 'assistant', content: aiResponse };
 
+        // Đảm bảo dữ liệu được lưu dưới dạng chuỗi JSON hợp lệ
         await redis.lpush(historyKey, JSON.stringify(newAiResponse), JSON.stringify(newMessage));
-        await redis.ltrim(historyKey, 0, 99); // Giới hạn lịch sử chat để tiết kiệm chi phí
+        await redis.ltrim(historyKey, 0, 99);
 
         return res.status(200).json({ success: true, response: aiResponse });
 
