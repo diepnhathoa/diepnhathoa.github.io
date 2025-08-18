@@ -15,7 +15,6 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Xử lý yêu cầu OPTIONS (yêu cầu kiểm tra của trình duyệt)
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
@@ -26,7 +25,7 @@ export default async function handler(req, res) {
 
     try {
         const { username } = req.body;
-
+        
         if (!username) {
             return res.status(400).json({ success: false, error: 'Username is required' });
         }

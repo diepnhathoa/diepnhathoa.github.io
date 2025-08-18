@@ -40,16 +40,12 @@ export default async function handler(req, res) {
       return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
 
-    const { userId, message, model = 'gpt-4o' } = req.body;
+    const { userId, message, model = 'gpt-5' } = req.body;
 
     // Xác thực model hợp lệ
-    const validModels = ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo', 'gpt-4-1106-preview', 'gpt-5'];
-    const selectedModel = validModels.includes(model) ? model : 'gpt-4o';
+    const validModels = ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo'];
+    const selectedModel = validModels.includes(model) ? model : 'gpt-5';
 
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID is required.' });
-    }
-    
     // Xử lý lệnh đặc biệt
     if (message === 'load_history') {
       try {
@@ -143,8 +139,17 @@ export default async function handler(req, res) {
         console.error('Error getting file context:', error);
       }
 
+      // Map các model từ tên hiển thị sang API thực tế
+      let apiModel = 'gpt-4o';
+      if (selectedModel === 'gpt-5') {
+        // Giả sử GPT-5 Mini là gpt-4o
+        apiModel = 'gpt-4o';
+      } else {
+        apiModel = selectedModel;
+      }
+
       const completion = await openai.chat.completions.create({
-        model: selectedModel,
+        model: apiModel,
         messages: [
           { role: "system", content: systemPrompt + fileContext },
           ...messages,

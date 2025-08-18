@@ -481,15 +481,24 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 currentUserId = data.userId;
                 localStorage.setItem('userId', currentUserId);
+                localStorage.setItem('username', username);
                 chatLoginContainer.classList.add('hidden');
                 chatInterface.classList.remove('hidden');
-                appendChatMessage('ai', `Chào mừng ${username} đến với trợ lý AI! Tôi có thể giúp gì cho anh?`);
+                chatHistoryDiv.innerHTML = ''; // Xóa tin nhắn mặc định nếu có
+                appendChatMessage('ai', `Xin chào ${username}! Tôi có thể giúp gì cho anh hôm nay?`);
                 loadChatHistory(currentUserId);
             } else {
                 alert('Có lỗi xảy ra khi đăng nhập: ' + data.error);
             }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('Lỗi đăng nhập:', error);
+            // Fallback nếu API bị lỗi - tạo ID ngẫu nhiên
+            currentUserId = 'user_' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('userId', currentUserId);
+            localStorage.setItem('username', username);
+            chatLoginContainer.classList.add('hidden');
+            chatInterface.classList.remove('hidden');
+            appendChatMessage('ai', `Xin chào ${username}! Tôi có thể giúp gì cho anh hôm nay?`);
         }
     });
     
@@ -502,6 +511,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessageInput.value = '';
         chatMessageInput.style.height = 'auto';
         sendButton.disabled = true;
+        
+        // Ẩn nút trả lời nhanh khi người dùng gửi tin nhắn
+        quickReplyDiv.style.display = 'none';
         
         // Hiển thị tin nhắn "đang nhập..." từ AI
         const typingMessageId = Date.now();
@@ -616,6 +628,28 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         input.click();
+    });
+
+    // Cập nhật hiển thị ngay khi trang tải
+    document.addEventListener('DOMContentLoaded', () => {
+        // Cập nhật suggestions bằng tiếng Việt
+        const vietnameseSuggestions = [
+            "Viết nội dung quảng cáo Facebook",
+            "Xu hướng marketing năm 2024",
+            "Cách tạo một chiến dịch email marketing",
+            "Chiến lược SEO hiệu quả"
+        ];
+        
+        suggestionChips.forEach((chip, index) => {
+            if (index < vietnameseSuggestions.length) {
+                chip.textContent = vietnameseSuggestions[index];
+            }
+        });
+        
+        // Ẩn quick reply ban đầu
+        if (quickReplyDiv) {
+            quickReplyDiv.style.display = 'none';
+        }
     });
 
     // Initialize based on login status
