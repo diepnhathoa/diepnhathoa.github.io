@@ -25,85 +25,88 @@ async function googleSearch(query) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://diepnhathoa.github.io');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    const allowedOrigins = ['https://diepnhathoa.github.io', 'https://diepnhathoa.dev', 'https://diepnhathoa-github-io.vercel.app'];
+    if (allowedOrigins.includes(req.headers.origin)) {
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
-  }
-
-  const { userId, message } = req.body;
-
-  if (!userId || !message) {
-    return res.status(400).json({ success: false, error: 'User ID and message are required.' });
-  }
-  
-  try {
-    const historyKey = `chat_history:${userId}`;
-    const chatHistory = await redis.lrange(historyKey, 0, -1);
-    let parsedHistory = [];
-    
-    if (chatHistory && chatHistory.length > 0) {
-      try {
-        parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
-      } catch (e) {
-        await redis.del(historyKey);
-        parsedHistory = [];
-      }
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
     }
 
-    let supplementalContent = '';
-    const searchKeywords = ['giá', 'thời tiết', 'tin tức', 'mới nhất', 'hôm nay', 'địa chỉ', 'năm', 'tháng'];
-    const requiresSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    if (req.method !== 'POST') {
+      return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    }
 
-    if (requiresSearch) {
-      console.log('Phát hiện câu hỏi cần tìm kiếm, đang gọi SerpApi...');
-      const searchResults = await googleSearch(message);
-      if (searchResults && searchResults.organic_results) {
-        // Lấy 3 kết quả đầu tiên để làm dữ liệu cho AI
-        supplementalContent = searchResults.organic_results.slice(0, 3).map(result => `Tiêu đề: ${result.title}\nĐường dẫn: ${result.link}\nĐoạn trích: ${result.snippet}`).join('\n\n');
-      }
+    const { userId, message } = req.body;
+
+    if (!userId || !message) {
+      return res.status(400).json({ success: false, error: 'User ID and message are required.' });
     }
     
-    // Chuẩn bị tin nhắn cho OpenAI API
-    const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
-    messages.push({ role: 'user', content: message });
+    try {
+      const historyKey = `chat_history:${userId}`;
+      const chatHistory = await redis.lrange(historyKey, 0, -1);
+      let parsedHistory = [];
+      
+      if (chatHistory && chatHistory.length > 0) {
+        try {
+          parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
+        } catch (e) {
+          await redis.del(historyKey);
+          parsedHistory = [];
+        }
+      }
 
-    const systemPrompt = `Bạn là một trợ lý ảo chuyên nghiệp, hữu ích và lịch sự.
-    Dữ liệu của bạn được cập nhật đến tháng 10 năm 2024.
-    Nếu người dùng hỏi về thông tin thời gian thực hoặc cần một liên kết, hãy sử dụng các kết quả tìm kiếm Google được cung cấp để trả lời.
-    Các kết quả tìm kiếm được cung cấp trong phần sau. Nếu không có kết quả tìm kiếm, hãy trả lời dựa trên kiến thức hiện có của bạn.
-    Luôn trả lời bằng tiếng Việt.
-    
-    ${supplementalContent ? `Dưới đây là các kết quả tìm kiếm mới nhất từ Google:\n${supplementalContent}\n` : ''}`;
+      let supplementalContent = '';
+      const searchKeywords = ['giá', 'thời tiết', 'tin tức', 'mới nhất', 'hôm nay', 'địa chỉ', 'năm', 'tháng'];
+      const requiresSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-      max_tokens: 1500,
-    });
+      if (requiresSearch) {
+        console.log('Phát hiện câu hỏi cần tìm kiếm, đang gọi SerpApi...');
+        const searchResults = await googleSearch(message);
+        if (searchResults && searchResults.organic_results) {
+          // Lấy 3 kết quả đầu tiên để làm dữ liệu cho AI
+          supplementalContent = searchResults.organic_results.slice(0, 3).map(result => `Tiêu đề: ${result.title}\nĐường dẫn: ${result.link}\nĐoạn trích: ${result.snippet}`).join('\n\n');
+        }
+      }
+      
+      // Chuẩn bị tin nhắn cho OpenAI API
+      const messages = parsedHistory.map(msg => ({ role: msg.role, content: msg.content }));
+      messages.push({ role: 'user', content: message });
 
-    const aiResponse = completion.choices[0].message.content;
+      const systemPrompt = `Bạn là một trợ lý ảo chuyên nghiệp, hữu ích và lịch sự.
+      Dữ liệu của bạn được cập nhật đến tháng 10 năm 2024.
+      Nếu người dùng hỏi về thông tin thời gian thực hoặc cần một liên kết, hãy sử dụng các kết quả tìm kiếm Google được cung cấp để trả lời.
+      Các kết quả tìm kiếm được cung cấp trong phần sau. Nếu không có kết quả tìm kiếm, hãy trả lời dựa trên kiến thức hiện có của bạn.
+      Luôn trả lời bằng tiếng Việt.
+      
+      ${supplementalContent ? `Dưới đây là các kết quả tìm kiếm mới nhất từ Google:\n${supplementalContent}\n` : ''}`;
 
-    // Lưu tin nhắn mới và phản hồi của AI vào Redis
-    const newMessage = { role: 'user', content: message };
-    const newAiResponse = { role: 'assistant', content: aiResponse };
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        max_tokens: 1500,
+      });
 
-    await redis.lpush(historyKey, JSON.stringify(newAiResponse), JSON.stringify(newMessage));
-    await redis.ltrim(historyKey, 0, 99);
+      const aiResponse = completion.choices[0].message.content;
 
-    return res.status(200).json({ success: true, response: aiResponse });
+      // Lưu tin nhắn mới và phản hồi của AI vào Redis
+      const newMessage = { role: 'user', content: message };
+      const newAiResponse = { role: 'assistant', content: aiResponse };
 
-  } catch (error) {
-    console.error('Chat API Error:', error);
-    return res.status(500).json({ success: false, error: 'An error occurred while processing the chat.' });
+      await redis.lpush(historyKey, JSON.stringify(newAiResponse), JSON.stringify(newMessage));
+      await redis.ltrim(historyKey, 0, 99);
+
+      return res.status(200).json({ success: true, response: aiResponse });
+
+    } catch (error) {
+      console.error('Chat API Error:', error);
+      return res.status(500).json({ success: false, error: 'An error occurred while processing the chat.' });
+    }
   }
-}
