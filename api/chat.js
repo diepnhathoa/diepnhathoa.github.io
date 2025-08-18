@@ -40,10 +40,48 @@ export default async function handler(req, res) {
       return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
 
-    const { userId, message } = req.body;
+    const { userId, message, model = 'gpt-4o' } = req.body;
 
-    if (!userId || !message) {
-      return res.status(400).json({ success: false, error: 'User ID and message are required.' });
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required.' });
+    }
+    
+    // Xử lý lệnh đặc biệt
+    if (message === 'load_history') {
+      try {
+        const historyKey = `chat_history:${userId}`;
+        const chatHistory = await redis.lrange(historyKey, 0, -1);
+        let parsedHistory = [];
+        
+        if (chatHistory && chatHistory.length > 0) {
+          try {
+            parsedHistory = chatHistory.map(item => JSON.parse(item)).reverse();
+          } catch (e) {
+            await redis.del(historyKey);
+            parsedHistory = [];
+          }
+        }
+        
+        return res.status(200).json({ success: true, history: parsedHistory });
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        return res.status(500).json({ success: false, error: 'Failed to load chat history.' });
+      }
+    }
+    
+    if (message === 'clear_history') {
+      try {
+        const historyKey = `chat_history:${userId}`;
+        await redis.del(historyKey);
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error('Error clearing chat history:', error);
+        return res.status(500).json({ success: false, error: 'Failed to clear chat history.' });
+      }
+    }
+
+    if (!message) {
+      return res.status(400).json({ success: false, error: 'Message is required.' });
     }
     
     try {
@@ -86,7 +124,7 @@ export default async function handler(req, res) {
       ${supplementalContent ? `Dưới đây là các kết quả tìm kiếm mới nhất từ Google:\n${supplementalContent}\n` : ''}`;
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: model, // Sử dụng model được truyền vào, mặc định là gpt-4o
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
