@@ -40,29 +40,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreviewContainer = document.getElementById('image-preview-container');
     let uploadedImageFiles = [];
 
+    // Chat UI Elements
     const chatLoginForm = document.getElementById('chat-login-form');
     const chatLoginInput = document.getElementById('username');
     const chatLoginContainer = document.getElementById('chat-login-container');
     const chatInterface = document.getElementById('chat-interface');
-    const chatForm = document.getElementById('chat-form');
     const chatHistoryDiv = document.getElementById('chat-history');
     const chatMessageInput = document.getElementById('chat-message-input');
-
-    // Results
-    const adsLoadingSpinner = document.getElementById('ads-loading-spinner');
-    const adsResultsContainer = document.getElementById('ads-results-container');
-    const adsResultsContent = document.getElementById('ads-results-content');
-
-    const postLoadingSpinner = document.getElementById('post-loading-spinner');
-    const postResultsContainer = document.getElementById('post-results-container');
-    const postOutput = document.getElementById('post-output');
-    
-    const imageLoadingSpinner = document.getElementById('image-loading-spinner');
-    const imageResultsContainer = document.getElementById('image-results-container');
-    const imageOutput = document.getElementById('image-output');
+    const chatForm = document.getElementById('chat-form');
+    const modelSelectButton = document.getElementById('model-select-button');
+    const currentModelSpan = document.getElementById('current-model');
+    const modelDropdown = document.getElementById('model-dropdown');
+    const modelOptions = document.querySelectorAll('.model-option');
+    const clearChatButton = document.getElementById('clear-chat-button');
+    const searchButton = document.getElementById('search-button');
+    const searchContainer = document.querySelector('.search-container');
+    const searchInput = document.getElementById('search-input');
+    const searchPrevButton = document.getElementById('search-prev');
+    const searchNextButton = document.getElementById('search-next');
+    const searchCloseButton = document.getElementById('search-close');
+    const suggestionChips = document.querySelectorAll('.suggestion-chip');
+    const sendButton = document.getElementById('send-button');
+    const voiceInputButton = document.getElementById('voice-input-button');
+    const attachmentButton = document.getElementById('attachment-button');
     
     let currentUserId = localStorage.getItem('userId');
-
+    let currentModel = localStorage.getItem('aiModel') || 'gpt-4o';
+    let isRecording = false;
+    let speechRecognition = null;
+    let searchResults = [];
+    let currentSearchIndex = -1;
 
     // === Tab Switching Logic ===
     function switchTab(tabToShow, buttonToActivate) {
@@ -178,9 +185,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // === Helper Functions for Chat ===
     function formatTextWithLinks(text) {
-        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-        return text.replace(linkRegex, `<a href="$2" target="_blank">$1</a>`);
+        // Convert URLs to clickable links
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        text = text.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+        
+        // Convert markdown-style links
+        const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        text = text.replace(markdownLinkRegex, '<a href="$2" target="_blank">$1</a>');
+        
+        // Convert code blocks
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        return text;
     }
 
     function appendChatMessage(role, message) {
@@ -532,7 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 appendChatMessage('ai', data.response);
             } else {
-                appendChatMessage('ai', 'Xin lỗi, đã xảy ra lỗi trong quá trình xử lý.');
+                appendChatMessage('ai', 'Xin lỗi, đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại.');
             }
         } catch (error) {
             console.error('Lỗi khi gửi tin nhắn:', error);
@@ -553,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
             appendChatMessage('ai', randomResponse);
         } finally {
-        sendButton.disabled = false;
+            sendButton.disabled = false;
         }
     });
 
@@ -607,35 +625,4 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInterface.classList.remove('hidden');
         loadChatHistory(currentUserId);
     }
-
-    // Hiển thị thanh tìm kiếm ban đầu ẩn đi
-    document.querySelector('.search-container').style.display = 'none';
-
-    // Thêm nút tìm kiếm vào header
-    const chatHeader = document.getElementById('chat-header');
-    const searchButton = document.createElement('button');
-    searchButton.id = 'search-button';
-    searchButton.title = 'Tìm kiếm trong cuộc trò chuyện';
-    searchButton.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-    `;
-    searchButton.style.background = 'none';
-    searchButton.style.border = 'none';
-    searchButton.style.cursor = 'pointer';
-    searchButton.style.color = '#666';
-
-    chatHeader.insertBefore(searchButton, clearChatButton);
-
-    // Hiển thị/ẩn thanh tìm kiếm
-    searchButton.addEventListener('click', () => {
-        const searchContainer = document.querySelector('.search-container');
-        if (searchContainer.style.display === 'none') {
-            searchContainer.style.display = 'flex';
-            searchInput.focus();
-        } else {
-            searchContainer.style.display = 'none';
-        }
-    });
 });
