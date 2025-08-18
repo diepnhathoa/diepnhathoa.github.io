@@ -33,6 +33,57 @@
         .hidden {
             display: none !important;
         }
+
+        /* Styles cho các phần của tab Sáng tạo Content */
+        .content-subtabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .content-subtab {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
+        
+        .content-subtab.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .result-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .image-preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .image-preview-container img {
+            max-width: 100px;
+            max-height: 100px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -86,56 +137,101 @@
         </div>
 
         <div id="tab-content-content" class="tab-content">
-            <h2>Sáng tạo Content & Hình ảnh</h2>
-            <p>Sử dụng AI để tạo các bài viết và hình ảnh độc đáo cho chiến dịch marketing của anh.</p>
-
-            <nav class="sub-tabs-container">
-                <button class="sub-tab-button active" id="sub-tab-post">Tạo Bài Đăng</button>
-                <button class="sub-tab-button" id="sub-tab-image">Tạo Hình Ảnh</button>
-            </nav>
-
-            <div id="sub-tab-post-content" class="sub-tab-content active">
-                <form id="post-generator-form">
+            <h2>Sáng tạo Content</h2>
+            
+            <!-- Sub-tabs for Content Creation -->
+            <div class="content-subtabs">
+                <button id="post-subtab" class="content-subtab active">Tạo Bài Đăng</button>
+                <button id="image-subtab" class="content-subtab">Tạo Hình Ảnh</button>
+            </div>
+            
+            <!-- Post Creation Section -->
+            <div id="post-creation" class="content-section active">
+                <form id="post-form">
                     <div class="form-group">
-                        <label for="post-image-upload">Hình ảnh sản phẩm (tùy chọn, có thể dán ảnh vào đây):</label>
-                        <input type="file" id="post-image-upload" accept="image/*" multiple class="custom-file-input"/>
-                        <div id="post-image-preview-container" class="image-preview-container hidden"></div>
+                        <label for="post-prompt">Mô tả về bài đăng của bạn:</label>
+                        <textarea id="post-prompt" placeholder="Ví dụ: Viết một bài đăng quảng cáo về sản phẩm nước hoa mới của thương hiệu X, với hương thơm quyến rũ và bền lâu..." rows="4"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="post-prompt">Mô tả sản phẩm hoặc yêu cầu:</label>
-                        <textarea id="post-prompt" placeholder="Ví dụ: Bàn phím cơ dành cho game thủ, thiết kế nhỏ gọn, đèn LED RGB..." required></textarea>
+                        <label for="post-tone">Tone giọng điệu:</label>
+                        <select id="post-tone">
+                            <option value="professional">Chuyên nghiệp</option>
+                            <option value="friendly">Thân thiện</option>
+                            <option value="humorous">Hài hước</option>
+                            <option value="persuasive">Thuyết phục</option>
+                            <option value="informative">Thông tin</option>
+                        </select>
                     </div>
-                    <button type="submit" id="post-create-button">Tạo Bài Đăng</button>
+                    <div class="form-group">
+                        <label for="post-length">Độ dài bài viết:</label>
+                        <select id="post-length">
+                            <option value="short">Ngắn (100-200 từ)</option>
+                            <option value="medium" selected>Trung bình (200-400 từ)</option>
+                            <option value="long">Dài (400-600 từ)</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="generate-post-btn">Tạo Bài Đăng</button>
                 </form>
-
-                <div id="post-loading-spinner" class="hidden">Đang sáng tạo...</div>
-                <div id="post-results-container" class="hidden">
-                    <h2>Bài viết đề xuất</h2>
-                    <div id="post-output" class="content-output"></div>
+                
+                <div id="post-result" class="result-section hidden">
+                    <h3>Bài đăng của bạn:</h3>
+                    <div id="post-content"></div>
+                    <div class="result-actions">
+                        <button id="copy-post-btn" class="action-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-copy"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Sao chép
+                        </button>
+                        <button id="regenerate-post-btn" class="action-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-cw"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            Tạo lại
+                        </button>
+                    </div>
                 </div>
             </div>
             
-            <div id="sub-tab-image-content" class="sub-tab-content">
-                <form id="image-generator-form">
+            <!-- Image Creation Section -->
+            <div id="image-creation" class="content-section">
+                <form id="image-form">
                     <div class="form-group">
-                        <label for="image-upload">Hình ảnh tham khảo (tùy chọn, có thể dán ảnh vào đây):</label>
-                        <input type="file" id="image-upload" accept="image/*" multiple class="custom-file-input"/>
-                        <div id="image-preview-container" class="image-preview-container hidden"></div>
+                        <label for="image-prompt">Mô tả hình ảnh bạn muốn tạo:</label>
+                        <textarea id="image-prompt" placeholder="Ví dụ: Một chai nước hoa màu vàng đặt trên nền lụa đen, với hoa hồng và hương thảo xung quanh, phong cách sang trọng, ánh sáng studio..." rows="4"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="image-prompt">Mô tả hình ảnh anh muốn tạo:</label>
-                        <textarea id="image-prompt" placeholder="Ví dụ: Một con rồng máy đang bay trên thành phố cyberpunk" required></textarea>
+                        <label for="image-style">Phong cách hình ảnh:</label>
+                        <select id="image-style">
+                            <option value="realistic">Chân thực</option>
+                            <option value="artistic">Nghệ thuật</option>
+                            <option value="cartoon">Hoạt hình</option>
+                            <option value="3d">3D Render</option>
+                            <option value="minimalist">Tối giản</option>
+                        </select>
                     </div>
-                    <button type="submit" id="image-create-button">Tạo Hình Ảnh</button>
+                    <div class="form-group">
+                        <label for="image-size">Kích thước:</label>
+                        <select id="image-size">
+                            <option value="1:1">Vuông (1:1)</option>
+                            <option value="4:5">Dọc (4:5)</option>
+                            <option value="16:9">Ngang (16:9)</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="generate-image-btn">Tạo Hình Ảnh</button>
                 </form>
-
-                <div id="image-loading-spinner" class="hidden">Đang tạo hình ảnh...</div>
-                <div id="image-results-container" class="hidden">
-                    <h2>Hình ảnh được tạo</h2>
-                    <div id="image-output"></div>
+                
+                <div id="image-result" class="result-section hidden">
+                    <h3>Hình ảnh của bạn:</h3>
+                    <div id="image-content" class="image-display"></div>
+                    <div class="result-actions">
+                        <button id="download-image-btn" class="action-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            Tải xuống
+                        </button>
+                        <button id="regenerate-image-btn" class="action-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-cw"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                            Tạo lại
+                        </button>
+                    </div>
                 </div>
             </div>
-
         </div>
         
         <div id="tab-chat-content" class="tab-content">

@@ -69,6 +69,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Sub-tabs for Content Creation
+    const postSubtab = document.getElementById('post-subtab');
+    const imageSubtab = document.getElementById('image-subtab');
+    const postCreation = document.getElementById('post-creation');
+    const imageCreation = document.getElementById('image-creation');
+
+    // Switch between post and image creation
+    if (postSubtab && imageSubtab) {
+        postSubtab.addEventListener('click', () => {
+            postSubtab.classList.add('active');
+            imageSubtab.classList.remove('active');
+            postCreation.classList.add('active');
+            imageCreation.classList.remove('active');
+        });
+
+        imageSubtab.addEventListener('click', () => {
+            imageSubtab.classList.add('active');
+            postSubtab.classList.remove('active');
+            imageCreation.classList.add('active');
+            postCreation.classList.remove('active');
+        });
+    }
+
     // === Helper Functions ===
     function formatTextWithLinks(text) {
         // Convert URLs to clickable links
@@ -395,8 +418,178 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize based on login status
-    if (currentUserId && chatInterface && chatLoginContainer) {
+    // Post Generation Form
+    const postForm = document.getElementById('post-form');
+    const postResult = document.getElementById('post-result');
+    const postContent = document.getElementById('post-content');
+    const copyPostBtn = document.getElementById('copy-post-btn');
+    const regeneratePostBtn = document.getElementById('regenerate-post-btn');
+
+    if (postForm) {
+        postForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = document.getElementById('post-prompt').value;
+            const tone = document.getElementById('post-tone').value;
+            const length = document.getElementById('post-length').value;
+            
+            if (!prompt) {
+                alert('Vui lòng nhập mô tả cho bài đăng');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('generate-post-btn').disabled = true;
+            document.getElementById('generate-post-btn').textContent = 'Đang tạo...';
+            
+            try {
+                // Demo content for now
+                setTimeout(() => {
+                    const generatedText = `Đây là bài đăng mẫu được tạo theo yêu cầu của bạn:\n\n${prompt}\n\nTone: ${tone}\nĐộ dài: ${length}\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`;
+                    
+                    postContent.innerHTML = generatedText.replace(/\n/g, '<br>');
+                    postResult.classList.remove('hidden');
+                    
+                    // Reset button
+                    document.getElementById('generate-post-btn').disabled = false;
+                    document.getElementById('generate-post-btn').textContent = 'Tạo Bài Đăng';
+                }, 1500);
+                
+                // For actual implementation
+                // const response = await fetch('API_URL', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ prompt, tone, length })
+                // });
+                // const data = await response.json();
+                // postContent.innerHTML = data.content.replace(/\n/g, '<br>');
+            } catch (error) {
+                console.error('Error generating post:', error);
+                alert('Có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại sau.');
+                
+                // Reset button
+                document.getElementById('generate-post-btn').disabled = false;
+                document.getElementById('generate-post-btn').textContent = 'Tạo Bài Đăng';
+            }
+        });
+    }
+    
+    // Copy post to clipboard
+    if (copyPostBtn) {
+        copyPostBtn.addEventListener('click', () => {
+            const text = postContent.innerText;
+            navigator.clipboard.writeText(text).then(
+                function() {
+                    // Temporarily change button text
+                    const originalText = copyPostBtn.innerHTML;
+                    copyPostBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg> Đã sao chép';
+                    
+                    setTimeout(() => {
+                        copyPostBtn.innerHTML = originalText;
+                    }, 2000);
+                },
+                function() {
+                    alert('Không thể sao chép. Vui lòng thử lại.');
+                }
+            );
+        });
+    }
+    
+    // Regenerate post
+    if (regeneratePostBtn) {
+        regeneratePostBtn.addEventListener('click', () => {
+            if (postForm) {
+                postForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    }
+
+    // Image Generation Form
+    const imageForm = document.getElementById('image-form');
+    const imageResult = document.getElementById('image-result');
+    const imageContent = document.getElementById('image-content');
+    const downloadImageBtn = document.getElementById('download-image-btn');
+    const regenerateImageBtn = document.getElementById('regenerate-image-btn');
+
+    if (imageForm) {
+        imageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = document.getElementById('image-prompt').value;
+            const style = document.getElementById('image-style').value;
+            const size = document.getElementById('image-size').value;
+            
+            if (!prompt) {
+                alert('Vui lòng nhập mô tả cho hình ảnh');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('generate-image-btn').disabled = true;
+            document.getElementById('generate-image-btn').textContent = 'Đang tạo...';
+            
+            try {
+                // Demo content for now - using placeholder image
+                setTimeout(() => {
+                    imageContent.innerHTML = `<img src="https://via.placeholder.com/800x600/3b82f6/ffffff?text=AI+Generated+Image" alt="Generated image">`;
+                    imageResult.classList.remove('hidden');
+                    
+                    // Reset button
+                    document.getElementById('generate-image-btn').disabled = false;
+                    document.getElementById('generate-image-btn').textContent = 'Tạo Hình Ảnh';
+                }, 1500);
+                
+                // For actual implementation
+                // const response = await fetch('API_URL', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ prompt, style, size })
+                // });
+                // const data = await response.json();
+                // imageContent.innerHTML = `<img src="${data.imageUrl}" alt="Generated image">`;
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('Có lỗi xảy ra khi tạo hình ảnh. Vui lòng thử lại sau.');
+                
+                // Reset button
+                document.getElementById('generate-image-btn').disabled = false;
+                document.getElementById('generate-image-btn').textContent = 'Tạo Hình Ảnh';
+            }
+        });
+    }
+    
+    // Download image
+    if (downloadImageBtn) {
+        downloadImageBtn.addEventListener('click', () => {
+            const img = imageContent.querySelector('img');
+            if (img) {
+                const link = document.createElement('a');
+                link.href = img.src;
+                link.download = 'ai-generated-image.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+    }
+    
+    // Regenerate image
+    if (regenerateImageBtn) {
+        regenerateImageBtn.addEventListener('click', () => {
+            if (imageForm) {
+                imageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+    }
+
+    // === Initialize ===
+    // Close the chat interface and show login by default
+    chatInterface.classList.add('hidden');
+    chatLoginContainer.classList.remove('hidden');
+
+    // Load default tab content
+    switchTab(tabAdsContent, tabAdsButton);
+
+    // If user is already logged in, show chat interface
+    if (currentUserId) {
         chatLoginContainer.classList.add('hidden');
         chatInterface.classList.remove('hidden');
         loadChatHistory(currentUserId);
