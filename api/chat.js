@@ -42,6 +42,10 @@ export default async function handler(req, res) {
 
     const { userId, message, model = 'gpt-4o' } = req.body;
 
+    // Xác thực model hợp lệ
+    const validModels = ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo', 'gpt-4-1106-preview', 'gpt-5'];
+    const selectedModel = validModels.includes(model) ? model : 'gpt-4o';
+
     if (!userId) {
       return res.status(400).json({ success: false, error: 'User ID is required.' });
     }
@@ -123,10 +127,26 @@ export default async function handler(req, res) {
       
       ${supplementalContent ? `Dưới đây là các kết quả tìm kiếm mới nhất từ Google:\n${supplementalContent}\n` : ''}`;
 
+      // Kiểm tra xem có dữ liệu file không
+      const fileContextKey = `file_context:${userId}`;
+      let fileContext = '';
+      try {
+        const fileData = await redis.get(fileContextKey);
+        if (fileData) {
+          const files = JSON.parse(fileData);
+          fileContext = `\nDữ liệu từ các tệp đã tải lên:\n`;
+          files.forEach((file, index) => {
+            fileContext += `Tệp ${index + 1}: ${file.name} (${file.type})\nNội dung: ${file.content}\n\n`;
+          });
+        }
+      } catch (error) {
+        console.error('Error getting file context:', error);
+      }
+
       const completion = await openai.chat.completions.create({
-        model: model, // Sử dụng model được truyền vào, mặc định là gpt-4o
+        model: selectedModel,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + fileContext },
           ...messages,
         ],
         max_tokens: 1500,

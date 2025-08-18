@@ -117,13 +117,39 @@
                     <form id="chat-login-form">
                         <div class="form-group">
                             <label for="username">Nhập tên của anh để bắt đầu:</label>
-                            <input type="text" id="username" placeholder="Ví dụ: Diệp Nhật Hòa" required>
+                            <input type="text" id="username" placeholder="Ví dụ: Diệp Nhật Hòa" class="chat-login-input" required>
                         </div>
                         <button type="submit" id="chat-login-button">Bắt đầu trò chuyện</button>
                     </form>
                 </div>
                 
                 <div id="chat-interface" class="hidden">
+                    <div class="search-container">
+                        <span class="search-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </span>
+                        <input type="text" id="search-input" placeholder="Tìm kiếm trong cuộc trò chuyện...">
+                        <div class="search-actions">
+                            <button type="button" id="search-prev" title="Kết quả trước">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </button>
+                            <button type="button" id="search-next" title="Kết quả tiếp">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </button>
+                            <button type="button" id="search-close" title="Đóng tìm kiếm">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div id="chat-header">
                         <div class="chat-model-selector">
                             <button id="model-select-button">
@@ -134,7 +160,10 @@
                             </button>
                             <div id="model-dropdown" class="hidden">
                                 <div class="model-option selected" data-model="gpt-4o">GPT-4o</div>
+                                <div class="model-option" data-model="gpt-4">GPT-4</div>
                                 <div class="model-option" data-model="gpt-3.5-turbo">GPT-3.5 Turbo</div>
+                                <div class="model-option" data-model="gpt-4-1106-preview">GPT-4.1</div>
+                                <div class="model-option" data-model="gpt-5">GPT-5</div>
                             </div>
                         </div>
                         <button id="clear-chat-button" title="Xóa cuộc trò chuyện">
@@ -157,9 +186,9 @@
                         </div>
                     </div>
                     
-                    <div id="chat-suggestion-chips">
-                        <button class="suggestion-chip">Xu hướng marketing mới nhất</button>
+                    <div id="chat-suggestions">
                         <button class="suggestion-chip">Viết nội dung quảng cáo Facebook</button>
+                        <button class="suggestion-chip">Các xu hướng marketing mới nhất</button>
                         <button class="suggestion-chip">Cách tối ưu hóa SEO</button>
                         <button class="suggestion-chip">Chiến lược content marketing</button>
                     </div>

@@ -1,6 +1,4 @@
-import { Redis } from '@upstash/redis';
 import { v4 as uuidv4 } from 'uuid';
-import cookie from 'cookie';
 
 // Kết nối Redis bằng KV_REST_API_URL và KV_REST_API_TOKEN
 const redis = new Redis({
@@ -9,8 +7,10 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-    // Thêm các headers cho CORS
-    res.setHeader('Access-Control-Allow-Origin', 'https://diepnhathoa.github.io');
+    const allowedOrigins = ['https://diepnhathoa.github.io', 'https://diepnhathoa.dev', 'https://diepnhathoa-github-io.vercel.app'];
+    if (allowedOrigins.includes(req.headers.origin)) {
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -20,17 +20,16 @@ export default async function handler(req, res) {
     }
     
     if (req.method !== 'POST') {
-        res.setHeader('Allow', ['POST']);
-        return res.status(405).end(`Method ${req.method} Not Allowed`);
+        return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
 
     try {
         const { username } = req.body;
 
         if (!username) {
-            return res.status(400).json({ success: false, error: 'Username is required.' });
+            return res.status(400).json({ success: false, error: 'Username is required' });
         }
-
+        
         let userId = req.cookies.user_id;
 
         if (!userId) {
@@ -51,6 +50,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, userId, userData });
     } catch (error) {
         console.error('Authentication Error:', error);
-        return res.status(500).json({ success: false, error: 'An error occurred during authentication.' });
+        return res.status(500).json({ success: false, error: 'An error occurred during authentication' });
     }
 }

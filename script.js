@@ -543,9 +543,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatHistoryDiv.removeChild(typingElement);
             }
             
-            appendChatMessage('ai', 'Xin lỗi, đã xảy ra lỗi kết nối. Vui lòng thử lại sau.');
+            // Mock response nếu không kết nối được với API
+            const mockResponses = [
+                "Xin lỗi, tôi gặp vấn đề kết nối với server. Tuy nhiên, tôi có thể giúp anh sau khi kết nối được khôi phục.",
+                "Có vẻ như đang có lỗi kết nối. Vui lòng thử lại sau vài phút.",
+                "Rất tiếc, hiện tại tôi không thể kết nối với server để xử lý yêu cầu của anh. Vui lòng kiểm tra kết nối internet và thử lại."
+            ];
+            
+            const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+            appendChatMessage('ai', randomResponse);
         } finally {
-            sendButton.disabled = false;
+        sendButton.disabled = false;
         }
     });
 
@@ -561,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!files || files.length === 0) return;
             
             // Hiển thị thông báo đang tải lên
-            appendChatMessage('ai', 'Đang xử lý tệp đính kèm...');
+            appendChatMessage('user', `Đang tải lên ${files.length} tệp...`);
             
             const formData = new FormData();
             for (let i = 0; i < files.length; i++) {
@@ -579,13 +587,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     const fileNames = Array.from(files).map(f => f.name).join(', ');
                     appendChatMessage('user', `Đã đính kèm: ${fileNames}`);
-                    appendChatMessage('ai', 'Tệp đã được tải lên. Anh có thể hỏi về nội dung của tệp này.');
+                    appendChatMessage('ai', 'Tệp đã được tải lên thành công. Anh có thể hỏi về nội dung của tệp này.');
                 } else {
-                    appendChatMessage('ai', 'Có lỗi xảy ra khi tải tệp lên: ' + data.error);
+                    appendChatMessage('ai', 'Có lỗi xảy ra khi tải tệp lên: ' + (data.error || 'Không xác định'));
                 }
             } catch (error) {
                 console.error('Lỗi khi tải tệp lên:', error);
-                appendChatMessage('ai', 'Xin lỗi, đã xảy ra lỗi khi tải tệp lên.');
+                appendChatMessage('ai', 'Xin lỗi, đã xảy ra lỗi khi tải tệp lên. Vui lòng thử lại sau.');
             }
         };
         
@@ -599,4 +607,35 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInterface.classList.remove('hidden');
         loadChatHistory(currentUserId);
     }
+
+    // Hiển thị thanh tìm kiếm ban đầu ẩn đi
+    document.querySelector('.search-container').style.display = 'none';
+
+    // Thêm nút tìm kiếm vào header
+    const chatHeader = document.getElementById('chat-header');
+    const searchButton = document.createElement('button');
+    searchButton.id = 'search-button';
+    searchButton.title = 'Tìm kiếm trong cuộc trò chuyện';
+    searchButton.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+    `;
+    searchButton.style.background = 'none';
+    searchButton.style.border = 'none';
+    searchButton.style.cursor = 'pointer';
+    searchButton.style.color = '#666';
+
+    chatHeader.insertBefore(searchButton, clearChatButton);
+
+    // Hiển thị/ẩn thanh tìm kiếm
+    searchButton.addEventListener('click', () => {
+        const searchContainer = document.querySelector('.search-container');
+        if (searchContainer.style.display === 'none') {
+            searchContainer.style.display = 'flex';
+            searchInput.focus();
+        } else {
+            searchContainer.style.display = 'none';
+        }
+    });
 });
