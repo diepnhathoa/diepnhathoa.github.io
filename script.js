@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Vercel Backend URL ===
     const VERCEL_BACKEND_URL = 'https://diepnhathoa-github-io.vercel.app';
     
-    // === OpenAI API Configuration ===
-    const OPENAI_API_KEY = "sk-proj-xdmzwbu9l8P4hdu45oeSCWBjMJHcVSJFBVmen0AqHoaanOBKqzBxTIhEm8o3T-aUk2M6248fdT3BlbkFJy8HPD89do2WPsup9F9OkDICFRYZCD-R27pE5A1-e6Eq_RA5VlqMWoUKWS0rfG09S1W9LB0fy8A";
+    // === API Configuration (No API keys in frontend for security) ===
+    // OpenAI API will be called through backend only
 
     // === DOM Elements ===
     // Tab Elements
@@ -79,6 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageCreation = document.getElementById('image-creation');
 
     if (postSubtab && imageSubtab) {
+        postSubtab.classList.add('active');
+        imageSubtab.classList.remove('active');
+        postCreation.classList.add('active');
+        imageCreation.classList.remove('active');
+        
         postSubtab.addEventListener('click', () => {
             postSubtab.classList.add('active');
             imageSubtab.classList.remove('active');
