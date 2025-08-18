@@ -595,3 +595,535 @@ document.addEventListener('DOMContentLoaded', () => {
         loadChatHistory(currentUserId);
     }
 });
+
+// API Configuration
+const API_CONFIG = {
+    // Sử dụng OpenAI API hoặc các API miễn phí khác
+    openai: {
+        url: 'https://api.openai.com/v1/chat/completions',
+        key: 'your-api-key-here' // Người dùng cần thay thế bằng API key thực
+    },
+    // Backup API cho image generation (có thể sử dụng các dịch vụ miễn phí)
+    image: {
+        url: 'https://api.openai.com/v1/images/generations',
+        key: 'your-api-key-here'
+    }
+};
+
+// DOM Elements
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+const contentSubtabs = document.querySelectorAll('.content-subtab');
+const contentSections = document.querySelectorAll('.content-section');
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTabs();
+    initializeContentTabs();
+    initializeAdsAnalyzer();
+    initializePostCreator();
+    initializeImageCreator();
+    initializeChat();
+});
+
+// Tab functionality
+function initializeTabs() {
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabId = this.id.replace('tab-', '');
+            switchTab(tabId);
+        });
+    });
+}
+
+function switchTab(tabId) {
+    // Update active tab button
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    
+    // Update active tab content
+    tabContents.forEach(content => content.classList.remove('active'));
+    document.getElementById(`tab-${tabId}-content`).classList.add('active');
+}
+
+// Content creation sub-tabs
+function initializeContentTabs() {
+    contentSubtabs.forEach(subtab => {
+        subtab.addEventListener('click', function() {
+            const sectionId = this.id.replace('-subtab', '-creation');
+            switchContentSection(sectionId);
+            
+            // Update active subtab
+            contentSubtabs.forEach(st => st.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+function switchContentSection(sectionId) {
+    contentSections.forEach(section => section.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+}
+
+// Ads Analyzer functionality
+function initializeAdsAnalyzer() {
+    const adsForm = document.getElementById('ads-analyzer-form');
+    if (adsForm) {
+        adsForm.addEventListener('submit', handleAdsAnalysis);
+    }
+}
+
+async function handleAdsAnalysis(e) {
+    e.preventDefault();
+    
+    const adTitle = document.getElementById('ad-title').value;
+    const adCopy = document.getElementById('ad-copy').value;
+    const landingPageUrl = document.getElementById('landing-page-url').value;
+    const targetKeywords = document.getElementById('target-keywords').value;
+    
+    const loadingSpinner = document.getElementById('ads-loading-spinner');
+    const resultsContainer = document.getElementById('ads-results-container');
+    const resultsContent = document.getElementById('ads-results-content');
+    
+    // Show loading
+    loadingSpinner.classList.remove('hidden');
+    resultsContainer.classList.add('hidden');
+    
+    try {
+        const prompt = `Phân tích quảng cáo sau đây và đưa ra đề xuất tối ưu:
+
+Tiêu đề: ${adTitle}
+Mô tả: ${adCopy}
+URL trang đích: ${landingPageUrl}
+Từ khóa mục tiêu: ${targetKeywords}
+
+Hãy phân tích và đưa ra:
+1. Điểm mạnh của quảng cáo
+2. Điểm yếu cần cải thiện
+3. Đề xuất tiêu đề mới (3 phiên bản)
+4. Đề xuất mô tả mới (3 phiên bản)
+5. Chiến lược từ khóa
+6. Đề xuất cải thiện trang đích`;
+
+        const response = await callOpenAI(prompt);
+        
+        // Display results
+        resultsContent.innerHTML = `<div class="analysis-result">${formatAnalysisResult(response)}</div>`;
+        resultsContainer.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Error analyzing ads:', error);
+        resultsContent.innerHTML = `<div class="error-message">Có lỗi xảy ra khi phân tích quảng cáo. Vui lòng thử lại sau.</div>`;
+        resultsContainer.classList.remove('hidden');
+    } finally {
+        loadingSpinner.classList.add('hidden');
+    }
+}
+
+// Post Creator functionality
+function initializePostCreator() {
+    const postForm = document.getElementById('post-form');
+    if (postForm) {
+        postForm.addEventListener('submit', handlePostCreation);
+    }
+    
+    // Copy and regenerate buttons
+    const copyBtn = document.getElementById('copy-post-btn');
+    const regenerateBtn = document.getElementById('regenerate-post-btn');
+    
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => copyToClipboard('post-content'));
+    }
+    
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', () => regeneratePost());
+    }
+}
+
+async function handlePostCreation(e) {
+    e.preventDefault();
+    
+    const prompt = document.getElementById('post-prompt').value;
+    const tone = document.getElementById('post-tone').value;
+    const length = document.getElementById('post-length').value;
+    
+    const generateBtn = document.getElementById('generate-post-btn');
+    const resultSection = document.getElementById('post-result');
+    const contentDiv = document.getElementById('post-content');
+    
+    // Show loading
+    generateBtn.textContent = 'Đang tạo...';
+    generateBtn.disabled = true;
+    resultSection.classList.add('hidden');
+    
+    try {
+        const fullPrompt = createPostPrompt(prompt, tone, length);
+        const response = await callOpenAI(fullPrompt);
+        
+        // Display result
+        contentDiv.innerHTML = formatPostContent(response);
+        resultSection.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Error creating post:', error);
+        contentDiv.innerHTML = `<div class="error-message">Có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại sau.</div>`;
+        resultSection.classList.remove('hidden');
+    } finally {
+        generateBtn.textContent = 'Tạo Bài Đăng';
+        generateBtn.disabled = false;
+    }
+}
+
+function createPostPrompt(userPrompt, tone, length) {
+    const toneMap = {
+        professional: 'chuyên nghiệp và trang trọng',
+        friendly: 'thân thiện và gần gũi',
+        humorous: 'hài hước và vui tươi',
+        persuasive: 'thuyết phục và có sức ảnh hưởng',
+        informative: 'thông tin và giáo dục'
+    };
+    
+    const lengthMap = {
+        short: '100-200 từ',
+        medium: '200-400 từ',
+        long: '400-600 từ'
+    };
+    
+    return `Tạo một bài đăng marketing với yêu cầu sau:
+
+Nội dung: ${userPrompt}
+Tone giọng: ${toneMap[tone]}
+Độ dài: ${lengthMap[length]}
+
+Hãy tạo một bài đăng hấp dẫn, có cấu trúc rõ ràng và phù hợp với mạng xã hội. Bài đăng cần:
+- Có hook thu hút ngay từ đầu
+- Nội dung có giá trị
+- Call-to-action rõ ràng
+- Sử dụng emoji phù hợp
+- Hashtag liên quan
+
+Trả về chỉ nội dung bài đăng, không cần giải thích thêm.`;
+}
+
+// Image Creator functionality
+function initializeImageCreator() {
+    const imageForm = document.getElementById('image-form');
+    if (imageForm) {
+        imageForm.addEventListener('submit', handleImageCreation);
+    }
+    
+    // Download and regenerate buttons
+    const downloadBtn = document.getElementById('download-image-btn');
+    const regenerateBtn = document.getElementById('regenerate-image-btn');
+    
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', downloadImage);
+    }
+    
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', regenerateImage);
+    }
+}
+
+async function handleImageCreation(e) {
+    e.preventDefault();
+    
+    const prompt = document.getElementById('image-prompt').value;
+    const style = document.getElementById('image-style').value;
+    const size = document.getElementById('image-size').value;
+    
+    const generateBtn = document.getElementById('generate-image-btn');
+    const resultSection = document.getElementById('image-result');
+    const contentDiv = document.getElementById('image-content');
+    
+    // Show loading
+    generateBtn.textContent = 'Đang tạo...';
+    generateBtn.disabled = true;
+    resultSection.classList.add('hidden');
+    
+    try {
+        // For demo purposes, we'll create a placeholder image
+        // In production, you would call an actual image generation API
+        const imageUrl = await generateDemoImage(prompt, style, size);
+        
+        // Display result
+        contentDiv.innerHTML = `<img src="${imageUrl}" alt="Generated image" style="max-width: 100%; height: auto;">`;
+        resultSection.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Error creating image:', error);
+        contentDiv.innerHTML = `<div class="error-message">Có lỗi xảy ra khi tạo hình ảnh. Vui lòng thử lại sau.</div>`;
+        resultSection.classList.remove('hidden');
+    } finally {
+        generateBtn.textContent = 'Tạo Hình Ảnh';
+        generateBtn.disabled = false;
+    }
+}
+
+// Demo image generation (replace with actual API call)
+async function generateDemoImage(prompt, style, size) {
+    // Create a placeholder image with text
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size based on selected ratio
+    const sizeMap = {
+        '1:1': [400, 400],
+        '4:5': [400, 500],
+        '16:9': [640, 360]
+    };
+    
+    const [width, height] = sizeMap[size] || [400, 400];
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Add text
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const lines = [
+        'Demo Image',
+        `Style: ${style}`,
+        `Size: ${size}`,
+        'Replace with real API'
+    ];
+    
+    lines.forEach((line, index) => {
+        ctx.fillText(line, width/2, height/2 + (index - 1.5) * 25);
+    });
+    
+    return canvas.toDataURL();
+}
+
+// Chat functionality
+function initializeChat() {
+    const loginForm = document.getElementById('chat-login-form');
+    const chatForm = document.getElementById('chat-form');
+    const modelSelector = document.getElementById('model-select-button');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleChatLogin);
+    }
+    
+    if (chatForm) {
+        chatForm.addEventListener('submit', handleChatMessage);
+    }
+    
+    if (modelSelector) {
+        modelSelector.addEventListener('click', toggleModelDropdown);
+    }
+    
+    // Model selection
+    const modelOptions = document.querySelectorAll('.model-option');
+    modelOptions.forEach(option => {
+        option.addEventListener('click', selectModel);
+    });
+}
+
+function handleChatLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    
+    // Hide login, show chat interface
+    document.getElementById('chat-login-container').classList.add('hidden');
+    document.getElementById('chat-interface').classList.remove('hidden');
+    
+    // Add welcome message
+    addChatMessage('assistant', `Xin chào ${username}! Tôi là AI assistant. Tôi có thể giúp bạn với marketing, sáng tạo nội dung, và nhiều việc khác. Bạn cần hỗ trợ gì?`);
+}
+
+async function handleChatMessage(e) {
+    e.preventDefault();
+    const messageInput = document.getElementById('chat-message-input');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message
+    addChatMessage('user', message);
+    messageInput.value = '';
+    
+    // Add typing indicator
+    const typingId = addTypingIndicator();
+    
+    try {
+        const response = await callOpenAI(message);
+        removeTypingIndicator(typingId);
+        addChatMessage('assistant', response);
+    } catch (error) {
+        removeTypingIndicator(typingId);
+        addChatMessage('assistant', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.');
+    }
+}
+
+function addChatMessage(role, content) {
+    const chatHistory = document.getElementById('chat-history');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}`;
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            <div class="message-text">${formatMessageContent(content)}</div>
+            <div class="message-time">${new Date().toLocaleTimeString()}</div>
+        </div>
+    `;
+    
+    chatHistory.appendChild(messageDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+// Utility functions
+async function callOpenAI(prompt) {
+    // Demo response for development
+    // Replace with actual API call in production
+    await delay(1000 + Math.random() * 2000); // Simulate API delay
+    
+    // Return demo response
+    if (prompt.includes('phân tích quảng cáo')) {
+        return `## Phân tích quảng cáo
+
+**Điểm mạnh:**
+- Tiêu đề thu hút
+- Mô tả rõ ràng
+- Có call-to-action
+
+**Điểm yếu:**
+- Chưa tối ưu từ khóa
+- Thiếu tính cấp bách
+
+**Đề xuất cải thiện:**
+1. Thêm từ khóa mục tiêu vào tiêu đề
+2. Tạo sense of urgency
+3. Cải thiện landing page`;
+    }
+    
+    return "Tôi đã nhận được yêu cầu của bạn. Đây là phản hồi demo. Trong phiên bản thực tế, tôi sẽ kết nối với API AI để cung cấp câu trả lời chính xác và hữu ích.";
+}
+
+function formatAnalysisResult(content) {
+    return content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
+function formatPostContent(content) {
+    return content.replace(/\n/g, '<br>');
+}
+
+function formatMessageContent(content) {
+    return content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent || element.innerText;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        showNotification('Đã sao chép vào clipboard!');
+    });
+}
+
+function showNotification(message) {
+    // Create temporary notification
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        z-index: 1000;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function addTypingIndicator() {
+    const chatHistory = document.getElementById('chat-history');
+    const typingDiv = document.createElement('div');
+    const id = 'typing-' + Date.now();
+    typingDiv.id = id;
+    typingDiv.className = 'chat-message assistant typing';
+    typingDiv.innerHTML = `
+        <div class="message-content">
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+    
+    chatHistory.appendChild(typingDiv);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.remove();
+    }
+}
+
+function toggleModelDropdown() {
+    const dropdown = document.getElementById('model-dropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+function selectModel(e) {
+    const model = e.target.dataset.model;
+    const modelName = e.target.textContent;
+    
+    // Update selected model
+    document.getElementById('current-model').textContent = modelName;
+    
+    // Update active state
+    document.querySelectorAll('.model-option').forEach(opt => opt.classList.remove('selected'));
+    e.target.classList.add('selected');
+    
+    // Hide dropdown
+    document.getElementById('model-dropdown').classList.add('hidden');
+}
+
+function regeneratePost() {
+    const form = document.getElementById('post-form');
+    handlePostCreation({ preventDefault: () => {} });
+}
+
+function regenerateImage() {
+    const form = document.getElementById('image-form');
+    handleImageCreation({ preventDefault: () => {} });
+}
+
+function downloadImage() {
+    const imageElement = document.querySelector('#image-content img');
+    if (imageElement) {
+        const link = document.createElement('a');
+        link.download = 'generated-image.png';
+        link.href = imageElement.src;
+        link.click();
+    }
+}
