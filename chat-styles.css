@@ -50,8 +50,9 @@
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-    z-index: 10;
+    z-index: 999;
     margin-top: 5px;
+    border: 1px solid #eaeaea;
 }
 
 #model-dropdown.hidden {
@@ -63,10 +64,7 @@
     cursor: pointer;
     border-bottom: 1px solid #eaeaea;
     color: #000000;
-}
-
-.model-option:last-child {
-    border-bottom: none;
+    transition: background-color 0.2s;
 }
 
 .model-option:hover {
@@ -270,7 +268,7 @@
     }
 }
 
-/* Suggestion chips - làm nhỏ hơn */
+/* Điều chỉnh kích thước suggestion chips */
 #chat-suggestions {
     display: flex;
     flex-wrap: nowrap;
@@ -304,35 +302,23 @@
     background-color: #e2e8f0;
 }
 
-/* Input area - làm giống hình mẫu */
-.chat-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background-color: #fff;
+/* Quick reply */
+.quick-reply {
+    padding: 8px 12px;
+    background-color: #f8fafc;
     border-top: 1px solid #eaeaea;
-}
-
-#chat-message-input {
-    flex-grow: 1;
-    resize: none;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    padding: 12px 45px 12px 15px;
-    font-family: inherit;
-    font-size: 15px;
-    max-height: 120px;
-    overflow-y: auto;
-    transition: height 0.2s;
+    font-size: 14px;
     color: #000000;
-    outline: none;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-#chat-message-input:focus {
-    border-color: #3b82f6;
+.quick-reply:hover {
+    background-color: #f1f5f9;
 }
 
+/* Nút voice và attachment */
 .input-button-group {
     position: relative;
     flex-grow: 1;
@@ -354,8 +340,8 @@
     background: none;
     border: none;
     color: #666;
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
     padding: 0;
     display: flex;
     align-items: center;
@@ -369,112 +355,39 @@
     color: #3b82f6;
 }
 
-#send-button {
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-#send-button:hover {
-    background-color: #2563eb;
-}
-
-#send-button:disabled {
-    background-color: #cbd5e1;
-    cursor: not-allowed;
-}
-
-/* Quick reply suggestion - nút ở dưới chat */
-.quick-reply {
-    padding: 8px;
-    background-color: #f8fafc;
-    border-top: 1px solid #eaeaea;
-    font-size: 14px;
-    color: #000000;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.quick-reply:hover {
-    background-color: #f1f5f9;
-}
-
-/* Form đăng nhập */
-#chat-login-form input {
-    color: #000000;
-    border: 1px solid #ddd;
+/* Đảm bảo dropdown model hoạt động đúng */
+#model-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 180px;
+    background-color: white;
     border-radius: 8px;
-    padding: 10px;
-    width: 100%;
-    font-size: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    margin-top: 5px;
 }
 
-#chat-login-button {
-    margin-top: 10px;
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
+#model-dropdown.hidden {
+    display: none;
+}
+
+.model-option {
+    padding: 10px 15px;
     cursor: pointer;
-    font-size: 15px;
-    transition: background-color 0.2s;
+    border-bottom: 1px solid #eaeaea;
+    color: #000000;
 }
 
-#chat-login-button:hover {
-    background-color: #2563eb;
+.model-option:last-child {
+    border-bottom: none;
 }
 
-/* Responsive styles */
-@media (max-width: 768px) {
-    #chat-interface {
-        height: 80vh;
-    }
-    
-    .chat-message {
-        max-width: 95%;
-    }
-}
-    
-    #chat-suggestions {
-        padding: 8px;
-    }
-    
-    .suggestion-chip {
-        padding: 6px 12px;
-        font-size: 13px;
-    }
+.model-option:hover {
+    background-color: #f5f5f5;
 }
 
-/* Responsive thêm */
-@media (max-width: 600px) {
-    .search-container {
-        margin: 8px;
-        padding: 6px 12px;
-    }
-    
-    #chat-suggestions {
-        padding: 8px;
-    }
-    
-    .suggestion-chip {
-        padding: 6px 10px;
-        font-size: 13px;
-    }
-}
-    }
-    
-    .suggestion-chip {
-        padding: 6px 10px;
-        font-size: 13px;
-    }
+.model-option.selected {
+    background-color: #f0f7ff;
+    color: #0066cc;
 }

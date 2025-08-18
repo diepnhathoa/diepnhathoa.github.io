@@ -16,6 +16,11 @@ async function googleSearch(query) {
     const response = await fetch(
       `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${process.env.SERPAPI_API_KEY}`
     );
+    
+    if (!response.ok) {
+      throw new Error(`SerpAPI responded with status: ${response.status}`);
+    }
+    
     const data = await response.json();
     return data;
   } catch (error) {
@@ -40,12 +45,12 @@ export default async function handler(req, res) {
       return res.status(405).json({ success: false, error: 'Method Not Allowed' });
     }
 
-    const { userId, message, model = 'gpt-5' } = req.body;
+    const { userId, message, model = 'gpt-5', useWebSearch = false } = req.body;
 
-    // Xác thực model hợp lệ
-    const validModels = ['gpt-5', 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo'];
-    const selectedModel = validModels.includes(model) ? model : 'gpt-5';
-
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'User ID is required.' });
+    }
+    
     // Xử lý lệnh đặc biệt
     if (message === 'load_history') {
       try {
@@ -99,15 +104,15 @@ export default async function handler(req, res) {
       }
 
       let supplementalContent = '';
-      const searchKeywords = ['giá', 'thời tiết', 'tin tức', 'mới nhất', 'hôm nay', 'địa chỉ', 'năm', 'tháng'];
-      const requiresSearch = searchKeywords.some(keyword => message.toLowerCase().includes(keyword));
-
-      if (requiresSearch) {
-        console.log('Phát hiện câu hỏi cần tìm kiếm, đang gọi SerpApi...');
+      // Sử dụng tìm kiếm web nếu được yêu cầu
+      if (useWebSearch) {
+        console.log('Web search enabled, querying SerpAPI...');
         const searchResults = await googleSearch(message);
         if (searchResults && searchResults.organic_results) {
           // Lấy 3 kết quả đầu tiên để làm dữ liệu cho AI
-          supplementalContent = searchResults.organic_results.slice(0, 3).map(result => `Tiêu đề: ${result.title}\nĐường dẫn: ${result.link}\nĐoạn trích: ${result.snippet}`).join('\n\n');
+          supplementalContent = searchResults.organic_results.slice(0, 3).map(result => 
+            `Tiêu đề: ${result.title}\nĐường dẫn: ${result.link}\nĐoạn trích: ${result.snippet}`
+          ).join('\n\n');
         }
       }
       
@@ -117,6 +122,7 @@ export default async function handler(req, res) {
 
       const systemPrompt = `Bạn là một trợ lý ảo chuyên nghiệp, hữu ích và lịch sự.
       Dữ liệu của bạn được cập nhật đến tháng 10 năm 2024.
+      ${useWebSearch ? 'Bạn có khả năng tìm kiếm thông tin trên web qua Google khi cần thiết.' : ''}
       Nếu người dùng hỏi về thông tin thời gian thực hoặc cần một liên kết, hãy sử dụng các kết quả tìm kiếm Google được cung cấp để trả lời.
       Các kết quả tìm kiếm được cung cấp trong phần sau. Nếu không có kết quả tìm kiếm, hãy trả lời dựa trên kiến thức hiện có của bạn.
       Luôn trả lời bằng tiếng Việt.
@@ -141,12 +147,14 @@ export default async function handler(req, res) {
 
       // Map các model từ tên hiển thị sang API thực tế
       let apiModel = 'gpt-4o';
-      if (selectedModel === 'gpt-5') {
-        // Giả sử GPT-5 Mini là gpt-4o
+      if (model === 'gpt-5') {
+        // Giả lập GPT-5 Mini bằng gpt-4o
         apiModel = 'gpt-4o';
-      } else {
-        apiModel = selectedModel;
+      } else if (model === 'gpt-4o' || model === 'gpt-4' || model === 'gpt-3.5-turbo') {
+        apiModel = model;
       }
+
+      console.log(`Using API model: ${apiModel} (selected: ${model})`);
 
       const completion = await openai.chat.completions.create({
         model: apiModel,
