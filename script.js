@@ -433,10 +433,14 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                     style: style
                 });
 
-                // Gọi API tạo hình ảnh
+                // Gọi API tạo hình ảnh với timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
                 const response = await fetch(`${VERCEL_BACKEND_URL}/api/generate-image`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
                     body: JSON.stringify({ 
                         prompt: enhancedPrompt,
                         size: sizeMap[size] || '1024x1024',
@@ -444,6 +448,13 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                         style: style === 'realistic' ? 'natural' : 'vivid'
                     })
                 });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
 
                 const data = await response.json();
                 console.log('Image generation response:', data);
@@ -454,10 +465,9 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                             <div style="text-align: center;">
                                 <img src="${data.imageUrl}" 
                                      alt="Generated image" 
-                                     style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
-                                     crossorigin="anonymous"
+                                     style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s;"
                                      onload="this.style.opacity=1"
-                                     style="opacity: 0; transition: opacity 0.3s;">
+                                     onerror="console.error('Image load error:', this.src.substring(0,50))">
                             </div>
                             <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px; color: #666;">
                                 <div style="margin-bottom: 8px;"><strong>Prompt gốc:</strong><br>${prompt}</div>
@@ -468,6 +478,7 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                         
                         // Store image URL for download
                         imageContent.setAttribute('data-image-url', data.imageUrl);
+                        imageContent.setAttribute('data-original-url', data.originalUrl || data.imageUrl);
                     }
                 } else {
                     throw new Error(data.error || 'Không thể tạo hình ảnh');
@@ -476,10 +487,13 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
             } catch (error) {
                 console.error('Error generating image:', error);
                 
-                let errorMsg = error.message;
+                let errorMsg = 'Có lỗi xảy ra khi tạo hình ảnh';
                 let suggestions = '';
                 
-                if (error.message.includes('content_policy_violation')) {
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Quá thời gian chờ (60s)';
+                    suggestions = 'Hệ thống đang quá tải. Vui lòng thử lại sau.';
+                } else if (error.message.includes('content_policy_violation')) {
                     errorMsg = 'Nội dung không được phép theo chính sách của OpenAI';
                     suggestions = 'Hãy thử mô tả khác, tránh nội dung bạo lực, người nổi tiếng, hoặc nhạy cảm.';
                 } else if (error.message.includes('rate_limit_exceeded')) {
@@ -488,9 +502,12 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 } else if (error.message.includes('insufficient_quota')) {
                     errorMsg = 'Hết quota API';
                     suggestions = 'Vui lòng liên hệ quản trị viên để nạp thêm credit.';
-                } else if (error.message.includes('Failed to fetch')) {
+                } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                     errorMsg = 'Lỗi kết nối mạng';
                     suggestions = 'Vui lòng kiểm tra kết nối internet và thử lại.';
+                } else if (error.message.includes('API key')) {
+                    errorMsg = 'Lỗi cấu hình API';
+                    suggestions = 'Vui lòng liên hệ quản trị viên.';
                 }
                 
                 if (imageContent) {
@@ -499,7 +516,8 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                             <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
                             <div style="font-weight: bold; margin-bottom: 8px;">${errorMsg}</div>
                             ${suggestions ? `<div style="font-size: 14px; margin-bottom: 15px;">${suggestions}</div>` : ''}
-                            <button onclick="this.parentElement.parentElement.querySelector('form').dispatchEvent(new Event('submit'))" 
+                            <div style="font-size: 12px; color: #666; margin-bottom: 15px;">Chi tiết: ${error.message}</div>
+                            <button onclick="document.getElementById('image-form').dispatchEvent(new Event('submit'))" 
                                     style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
                                 Thử lại
                             </button>
@@ -517,32 +535,37 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
     
     if (downloadImageBtn) {
         downloadImageBtn.addEventListener('click', async () => {
-            const img = imageContent.querySelector('img');
             const imageUrl = imageContent.getAttribute('data-image-url');
             
-            if (img && imageUrl) {
+            if (imageUrl) {
                 try {
                     // Show downloading status
                     const originalText = downloadImageBtn.innerHTML;
                     downloadImageBtn.innerHTML = 'Đang tải...';
                     downloadImageBtn.disabled = true;
                     
-                    // Fetch image as blob
-                    const response = await fetch(imageUrl);
-                    if (!response.ok) throw new Error('Failed to fetch image');
-                    
-                    const blob = await response.blob();
-                    
-                    // Create download link
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `ai-generated-image-${Date.now()}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    // Clean up object URL
-                    URL.revokeObjectURL(link.href);
+                    // For base64 images, create blob directly
+                    if (imageUrl.startsWith('data:')) {
+                        const link = document.createElement('a');
+                        link.href = imageUrl;
+                        link.download = `ai-generated-image-${Date.now()}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        // For URL images, fetch as blob
+                        const response = await fetch(imageUrl);
+                        const blob = await response.blob();
+                        
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = `ai-generated-image-${Date.now()}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        URL.revokeObjectURL(link.href);
+                    }
                     
                     // Restore button
                     downloadImageBtn.innerHTML = originalText;
@@ -550,14 +573,7 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                     
                 } catch (error) {
                     console.error('Error downloading image:', error);
-                    // Fallback to simple download
-                    const link = document.createElement('a');
-                    link.href = imageUrl;
-                    link.download = `ai-generated-image-${Date.now()}.png`;
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    alert('Lỗi khi tải hình ảnh: ' + error.message);
                     
                     // Restore button
                     downloadImageBtn.innerHTML = originalText;
@@ -813,14 +829,60 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
         });
     }
 
-    // === Initialize ===
-    if (chatInterface) chatInterface.classList.add('hidden');
-    if (chatLoginContainer) chatLoginContainer.classList.remove('hidden');
-    switchTab(tabAdsContent, tabAdsButton);
+    // === KEYBOARD SHORTCUTS ===
+    document.addEventListener('keydown', (e) => {
+        // Enter to send message (but not Shift+Enter)
+        if (e.key === 'Enter' && !e.shiftKey && chatMessageInput && document.activeElement === chatMessageInput) {
+            e.preventDefault();
+            if (chatForm) {
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        }
+        
+        // Escape to clear current message
+        if (e.key === 'Escape' && chatMessageInput && document.activeElement === chatMessageInput) {
+            chatMessageInput.value = '';
+        }
+    });
 
-    if (currentUserId) {
-        if (chatLoginContainer) chatLoginContainer.classList.add('hidden');
-        if (chatInterface) chatInterface.classList.remove('hidden');
-        loadChatHistory(currentUserId);
+    // === AUTO-RESIZE TEXTAREA ===
+    if (chatMessageInput) {
+        chatMessageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
     }
+
+    // === INITIALIZE APPLICATION ===
+    function initializeApp() {
+        // Hide chat interface initially
+        if (chatInterface) chatInterface.classList.add('hidden');
+        if (chatLoginContainer) chatLoginContainer.classList.remove('hidden');
+        
+        // Set default tab
+        switchTab(tabAdsContent, tabAdsButton);
+        
+        // Auto-login if user exists
+        if (currentUserId) {
+            if (chatLoginContainer) chatLoginContainer.classList.add('hidden');
+            if (chatInterface) chatInterface.classList.remove('hidden');
+            loadChatHistory(currentUserId);
+        }
+        
+        console.log('🚀 AI Marketing Tool initialized successfully!');
+        console.log('Current user:', currentUserId || 'None');
+        console.log('Current model:', currentModel);
+    }
+
+    // === ERROR HANDLING ===
+    window.addEventListener('error', (e) => {
+        console.error('Global error:', e.error);
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+        console.error('Unhandled promise rejection:', e.reason);
+    });
+
+    // Initialize the application
+    initializeApp();
 });
