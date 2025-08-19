@@ -5,11 +5,26 @@ const openai = new OpenAI({
 });
 
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Set comprehensive CORS headers - Fix CORS policy issue
+  const allowedOrigins = [
+    'https://diepnhathoa.github.io', 
+    'https://diepnhathoa.dev', 
+    'https://diepnhathoa-github-io.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:5500',
+    'http://localhost:5500'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -24,6 +39,11 @@ export default async function handler(req, res) {
   }
 
   // Debug: Check if API key exists
+  console.log('Environment check:', {
+    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    keyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7) + '...'
+  });
+
   if (!process.env.OPENAI_API_KEY) {
     console.error('OPENAI_API_KEY not found in environment variables');
     return res.status(500).json({
@@ -34,6 +54,13 @@ export default async function handler(req, res) {
 
   try {
     const { prompt, size = '1024x1024', quality = 'standard', style = 'vivid' } = req.body;
+
+    console.log('Received request:', { 
+      prompt: prompt?.substring(0, 50) + '...', 
+      size, 
+      quality, 
+      style 
+    });
 
     if (!prompt) {
       return res.status(400).json({ 
@@ -119,25 +146,8 @@ export default async function handler(req, res) {
     return res.status(statusCode).json({
       success: false,
       error: errorMessage,
-      code: error.code || 'unknown_error'
-    });
-  }
-}
-      statusCode = 429;
-    } else if (error.code === 'insufficient_quota') {
-      errorMessage = 'Hết quota API OpenAI. Vui lòng liên hệ quản trị viên.';
-      statusCode = 402;
-    } else if (error.message?.includes('API key')) {
-      errorMessage = 'Lỗi cấu hình API key. Vui lòng liên hệ quản trị viên.';
-      statusCode = 500;
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
-    return res.status(statusCode).json({
-      success: false,
-      error: errorMessage,
-      code: error.code || 'unknown_error'
+      code: error.code || 'unknown_error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }

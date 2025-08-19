@@ -428,18 +428,22 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 const enhancedPrompt = `${prompt}, ${styleDescriptions[style]}, high quality, detailed`;
 
                 console.log('Sending image generation request:', {
+                    url: `${VERCEL_BACKEND_URL}/api/generate-image`,
                     prompt: enhancedPrompt,
                     size: sizeMap[size],
                     style: style
                 });
 
-                // Gọi API tạo hình ảnh với timeout
+                // Gọi API tạo hình ảnh với timeout và better error handling
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
 
                 const response = await fetch(`${VERCEL_BACKEND_URL}/api/generate-image`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     signal: controller.signal,
                     body: JSON.stringify({ 
                         prompt: enhancedPrompt,
@@ -451,9 +455,20 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
 
                 clearTimeout(timeoutId);
 
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    let errorText;
+                    try {
+                        const errorData = await response.json();
+                        errorText = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+                        console.error('API Error:', errorData);
+                    } catch (parseError) {
+                        errorText = await response.text();
+                        console.error('Response parse error:', parseError);
+                    }
+                    throw new Error(errorText);
                 }
 
                 const data = await response.json();
@@ -478,7 +493,6 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                         
                         // Store image URL for download
                         imageContent.setAttribute('data-image-url', data.imageUrl);
-                        imageContent.setAttribute('data-original-url', data.originalUrl || data.imageUrl);
                     }
                 } else {
                     throw new Error(data.error || 'Không thể tạo hình ảnh');
@@ -491,7 +505,7 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 let suggestions = '';
                 
                 if (error.name === 'AbortError') {
-                    errorMsg = 'Quá thời gian chờ (60s)';
+                    errorMsg = 'Quá thời gian chờ (90s)';
                     suggestions = 'Hệ thống đang quá tải. Vui lòng thử lại sau.';
                 } else if (error.message.includes('content_policy_violation')) {
                     errorMsg = 'Nội dung không được phép theo chính sách của OpenAI';
@@ -505,9 +519,12 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                     errorMsg = 'Lỗi kết nối mạng';
                     suggestions = 'Vui lòng kiểm tra kết nối internet và thử lại.';
-                } else if (error.message.includes('API key')) {
+                } else if (error.message.includes('API key') || error.message.includes('OpenAI API key')) {
                     errorMsg = 'Lỗi cấu hình API';
-                    suggestions = 'Vui lòng liên hệ quản trị viên.';
+                    suggestions = 'Vui lòng liên hệ quản trị viên để cấu hình OpenAI API key.';
+                } else if (error.message.includes('CORS')) {
+                    errorMsg = 'Lỗi CORS policy';
+                    suggestions = 'Đang khắc phục lỗi kết nối. Vui lòng thử lại sau.';
                 }
                 
                 if (imageContent) {

@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { Redis } from '@upstash/redis';
 
 // Kết nối Redis bằng KV_REST_API_URL và KV_REST_API_TOKEN
 const redis = new Redis({
