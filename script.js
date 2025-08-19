@@ -394,17 +394,29 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
             const generateBtn = document.getElementById('generate-image-btn');
             if (generateBtn) {
                 generateBtn.disabled = true;
-                generateBtn.textContent = 'Đang tạo...';
+                generateBtn.textContent = 'Đang tạo hình ảnh...';
             }
+            
+            // Show loading state in image content
+            if (imageContent) {
+                imageContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="margin-bottom: 10px;">🎨</div>
+                        <div>Đang tạo hình ảnh với DALL-E 3...</div>
+                        <div style="font-size: 14px; margin-top: 5px;">Có thể mất 10-30 giây</div>
+                    </div>
+                `;
+            }
+            if (imageResult) imageResult.classList.remove('hidden');
             
             try {
                 // Tạo prompt chi tiết cho DALL-E
                 const styleDescriptions = {
                     'realistic': 'photorealistic, high quality, detailed, professional photography',
-                    'artistic': 'artistic style, painterly, creative, expressive',
-                    'cartoon': 'cartoon style, animated, colorful, fun',
-                    '3d': '3D render, modern, clean, professional 3D modeling',
-                    'minimalist': 'minimalist style, clean, simple, elegant'
+                    'artistic': 'artistic style, painterly, creative, expressive, fine art',
+                    'cartoon': 'cartoon style, animated, colorful, fun, illustration',
+                    '3d': '3D render, modern, clean, professional 3D modeling, CGI',
+                    'minimalist': 'minimalist style, clean, simple, elegant, modern design'
                 };
 
                 const sizeMap = {
@@ -414,6 +426,12 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 };
 
                 const enhancedPrompt = `${prompt}, ${styleDescriptions[style]}, high quality, detailed`;
+
+                console.log('Sending image generation request:', {
+                    prompt: enhancedPrompt,
+                    size: sizeMap[size],
+                    style: style
+                });
 
                 // Gọi API tạo hình ảnh
                 const response = await fetch(`${VERCEL_BACKEND_URL}/api/generate-image`, {
@@ -428,40 +446,66 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                 });
 
                 const data = await response.json();
+                console.log('Image generation response:', data);
 
                 if (data.success && data.imageUrl) {
                     if (imageContent) {
                         imageContent.innerHTML = `
-                            <img src="${data.imageUrl}" alt="Generated image" style="max-width: 100%; height: auto; border-radius: 8px;" crossorigin="anonymous">
-                            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
-                                <strong>Prompt đã sử dụng:</strong><br>
-                                ${enhancedPrompt}
-                                <br><br>
-                                <strong>Cài đặt:</strong><br>
-                                Phong cách: ${style}, Kích thước: ${size}
+                            <div style="text-align: center;">
+                                <img src="${data.imageUrl}" 
+                                     alt="Generated image" 
+                                     style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
+                                     crossorigin="anonymous"
+                                     onload="this.style.opacity=1"
+                                     style="opacity: 0; transition: opacity 0.3s;">
+                            </div>
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 14px; color: #666;">
+                                <div style="margin-bottom: 8px;"><strong>Prompt gốc:</strong><br>${prompt}</div>
+                                ${data.revisedPrompt ? `<div style="margin-bottom: 8px;"><strong>Prompt được OpenAI tối ưu:</strong><br>${data.revisedPrompt}</div>` : ''}
+                                <div><strong>Cài đặt:</strong> ${style} • ${size} • Chất lượng HD</div>
                             </div>
                         `;
                         
                         // Store image URL for download
                         imageContent.setAttribute('data-image-url', data.imageUrl);
                     }
-                    if (imageResult) imageResult.classList.remove('hidden');
                 } else {
                     throw new Error(data.error || 'Không thể tạo hình ảnh');
                 }
                 
             } catch (error) {
                 console.error('Error generating image:', error);
+                
+                let errorMsg = error.message;
+                let suggestions = '';
+                
+                if (error.message.includes('content_policy_violation')) {
+                    errorMsg = 'Nội dung không được phép theo chính sách của OpenAI';
+                    suggestions = 'Hãy thử mô tả khác, tránh nội dung bạo lực, người nổi tiếng, hoặc nhạy cảm.';
+                } else if (error.message.includes('rate_limit_exceeded')) {
+                    errorMsg = 'Đã vượt quá giới hạn tạo hình ảnh';
+                    suggestions = 'Vui lòng chờ vài phút rồi thử lại.';
+                } else if (error.message.includes('insufficient_quota')) {
+                    errorMsg = 'Hết quota API';
+                    suggestions = 'Vui lòng liên hệ quản trị viên để nạp thêm credit.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMsg = 'Lỗi kết nối mạng';
+                    suggestions = 'Vui lòng kiểm tra kết nối internet và thử lại.';
+                }
+                
                 if (imageContent) {
                     imageContent.innerHTML = `
-                        <div class="error-message" style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c33;">
-                            <strong>Lỗi khi tạo hình ảnh:</strong><br>
-                            ${error.message}<br><br>
-                            <em>Vui lòng thử lại với mô tả khác hoặc kiểm tra kết nối mạng.</em>
+                        <div style="text-align: center; padding: 30px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; color: #856404;">
+                            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                            <div style="font-weight: bold; margin-bottom: 8px;">${errorMsg}</div>
+                            ${suggestions ? `<div style="font-size: 14px; margin-bottom: 15px;">${suggestions}</div>` : ''}
+                            <button onclick="this.parentElement.parentElement.querySelector('form').dispatchEvent(new Event('submit'))" 
+                                    style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Thử lại
+                            </button>
                         </div>
                     `;
                 }
-                if (imageResult) imageResult.classList.remove('hidden');
             } finally {
                 if (generateBtn) {
                     generateBtn.disabled = false;
@@ -478,8 +522,15 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
             
             if (img && imageUrl) {
                 try {
+                    // Show downloading status
+                    const originalText = downloadImageBtn.innerHTML;
+                    downloadImageBtn.innerHTML = 'Đang tải...';
+                    downloadImageBtn.disabled = true;
+                    
                     // Fetch image as blob
                     const response = await fetch(imageUrl);
+                    if (!response.ok) throw new Error('Failed to fetch image');
+                    
                     const blob = await response.blob();
                     
                     // Create download link
@@ -492,6 +543,11 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                     
                     // Clean up object URL
                     URL.revokeObjectURL(link.href);
+                    
+                    // Restore button
+                    downloadImageBtn.innerHTML = originalText;
+                    downloadImageBtn.disabled = false;
+                    
                 } catch (error) {
                     console.error('Error downloading image:', error);
                     // Fallback to simple download
@@ -502,6 +558,10 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+                    
+                    // Restore button
+                    downloadImageBtn.innerHTML = originalText;
+                    downloadImageBtn.disabled = false;
                 }
             } else {
                 alert('Không có hình ảnh để tải xuống');

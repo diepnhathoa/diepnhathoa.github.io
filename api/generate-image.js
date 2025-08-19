@@ -17,7 +17,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed' 
+    });
   }
 
   try {
@@ -40,7 +43,7 @@ export default async function handler(req, res) {
     // Validate style
     const imageStyle = ['vivid', 'natural'].includes(style) ? style : 'vivid';
 
-    console.log('Generating image with:', {
+    console.log('Generating image with DALL-E 3:', {
       prompt: prompt.substring(0, 100) + '...',
       size: imageSize,
       quality: imageQuality,
@@ -58,18 +61,20 @@ export default async function handler(req, res) {
     });
 
     const imageUrl = response.data[0]?.url;
+    const revisedPrompt = response.data[0]?.revised_prompt;
 
     if (!imageUrl) {
       throw new Error('No image URL returned from OpenAI');
     }
 
-    console.log('Image generated successfully');
+    console.log('Image generated successfully:', imageUrl);
 
     return res.status(200).json({
       success: true,
       imageUrl: imageUrl,
-      revisedPrompt: response.data[0]?.revised_prompt,
+      revisedPrompt: revisedPrompt,
       settings: {
+        originalPrompt: prompt,
         size: imageSize,
         quality: imageQuality,
         style: imageStyle
@@ -80,20 +85,25 @@ export default async function handler(req, res) {
     console.error('Error generating image:', error);
 
     let errorMessage = 'Đã xảy ra lỗi khi tạo hình ảnh';
+    let statusCode = 500;
     
     if (error.code === 'content_policy_violation') {
-      errorMessage = 'Nội dung không được phép. Vui lòng thử mô tả khác.';
+      errorMessage = 'Nội dung không được phép theo chính sách của OpenAI. Vui lòng thử mô tả khác.';
+      statusCode = 400;
     } else if (error.code === 'rate_limit_exceeded') {
-      errorMessage = 'Đã vượt quá giới hạn tạo hình ảnh. Vui lòng thử lại sau.';
+      errorMessage = 'Đã vượt quá giới hạn tạo hình ảnh. Vui lòng thử lại sau vài phút.';
+      statusCode = 429;
     } else if (error.code === 'insufficient_quota') {
       errorMessage = 'Hết quota API. Vui lòng liên hệ quản trị viên.';
+      statusCode = 402;
     } else if (error.message) {
       errorMessage = error.message;
     }
 
-    return res.status(500).json({
+    return res.status(statusCode).json({
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      code: error.code || 'unknown_error'
     });
   }
 }
