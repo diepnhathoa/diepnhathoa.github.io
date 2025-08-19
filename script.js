@@ -196,13 +196,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ 
                     userId: currentUserId || 'anonymous', 
                     message,
-                    model: currentModel 
+                    model: currentModel,
+                    type: type // Thêm type để backend biết loại request
                 })
             });
             
             const data = await response.json();
             if (data.success) {
-                return data.response;
+                return data.response || data.imageUrl; // Support both text and image responses
             } else {
                 throw new Error(data.error || 'Unknown error');
             }
@@ -397,73 +398,68 @@ Hãy tạo bài đăng bằng tiếng Việt và chỉ trả về nội dung bà
             }
             
             try {
-                const imagePrompt = `Tạo mô tả chi tiết cho hình ảnh dựa trên yêu cầu:
-
-YÊU CẦU:
-- Mô tả: ${prompt}
-- Phong cách: ${style}
-- Kích thước: ${size}
-
-Hãy tạo mô tả chi tiết, sáng tạo cho hình ảnh này bằng tiếng Việt để có thể sử dụng cho AI tạo hình ảnh.`;
-
-                const response = await callOpenAI(imagePrompt, 'image_description');
-                
-                // Create demo placeholder image
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                const sizeMap = {
-                    '1:1': [500, 500],
-                    '4:5': [400, 500],
-                    '16:9': [640, 360]
+                // Tạo prompt chi tiết cho DALL-E
+                const styleDescriptions = {
+                    'realistic': 'photorealistic, high quality, detailed, professional photography',
+                    'artistic': 'artistic style, painterly, creative, expressive',
+                    'cartoon': 'cartoon style, animated, colorful, fun',
+                    '3d': '3D render, modern, clean, professional 3D modeling',
+                    'minimalist': 'minimalist style, clean, simple, elegant'
                 };
-                
-                const [width, height] = sizeMap[size] || [500, 500];
-                canvas.width = width;
-                canvas.height = height;
-                
-                // Create gradient background
-                const gradient = ctx.createLinearGradient(0, 0, width, height);
-                gradient.addColorStop(0, '#667eea');
-                gradient.addColorStop(1, '#764ba2');
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
-                
-                // Add text
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 20px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                const lines = [
-                    'AI Generated Image',
-                    `Style: ${style}`,
-                    `Size: ${size}`,
-                    'Demo Preview'
-                ];
-                
-                lines.forEach((line, index) => {
-                    ctx.fillText(line, width/2, height/2 + (index - 1.5) * 30);
+
+                const sizeMap = {
+                    '1:1': '1024x1024',
+                    '4:5': '1024x1280', 
+                    '16:9': '1792x1024'
+                };
+
+                const enhancedPrompt = `${prompt}, ${styleDescriptions[style]}, high quality, detailed`;
+
+                // Gọi API tạo hình ảnh
+                const response = await fetch(`${VERCEL_BACKEND_URL}/api/generate-image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        prompt: enhancedPrompt,
+                        size: sizeMap[size] || '1024x1024',
+                        quality: 'hd',
+                        style: style === 'realistic' ? 'natural' : 'vivid'
+                    })
                 });
-                
-                const imageUrl = canvas.toDataURL();
-                
-                if (imageContent) {
-                    imageContent.innerHTML = `
-                        <img src="${imageUrl}" alt="Generated image" style="max-width: 100%; height: auto; border-radius: 8px;">
-                        <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
-                            <strong>AI Mô tả:</strong><br>
-                            ${response.replace(/\n/g, '<br>')}
-                        </div>
-                    `;
+
+                const data = await response.json();
+
+                if (data.success && data.imageUrl) {
+                    if (imageContent) {
+                        imageContent.innerHTML = `
+                            <img src="${data.imageUrl}" alt="Generated image" style="max-width: 100%; height: auto; border-radius: 8px;" crossorigin="anonymous">
+                            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+                                <strong>Prompt đã sử dụng:</strong><br>
+                                ${enhancedPrompt}
+                                <br><br>
+                                <strong>Cài đặt:</strong><br>
+                                Phong cách: ${style}, Kích thước: ${size}
+                            </div>
+                        `;
+                        
+                        // Store image URL for download
+                        imageContent.setAttribute('data-image-url', data.imageUrl);
+                    }
+                    if (imageResult) imageResult.classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || 'Không thể tạo hình ảnh');
                 }
-                if (imageResult) imageResult.classList.remove('hidden');
                 
             } catch (error) {
                 console.error('Error generating image:', error);
                 if (imageContent) {
-                    imageContent.innerHTML = `<div class="error-message">Có lỗi xảy ra khi tạo hình ảnh: ${error.message}</div>`;
+                    imageContent.innerHTML = `
+                        <div class="error-message" style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c33;">
+                            <strong>Lỗi khi tạo hình ảnh:</strong><br>
+                            ${error.message}<br><br>
+                            <em>Vui lòng thử lại với mô tả khác hoặc kiểm tra kết nối mạng.</em>
+                        </div>
+                    `;
                 }
                 if (imageResult) imageResult.classList.remove('hidden');
             } finally {
@@ -476,15 +472,39 @@ Hãy tạo mô tả chi tiết, sáng tạo cho hình ảnh này bằng tiếng 
     }
     
     if (downloadImageBtn) {
-        downloadImageBtn.addEventListener('click', () => {
+        downloadImageBtn.addEventListener('click', async () => {
             const img = imageContent.querySelector('img');
-            if (img) {
-                const link = document.createElement('a');
-                link.href = img.src;
-                link.download = 'ai-generated-image.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+            const imageUrl = imageContent.getAttribute('data-image-url');
+            
+            if (img && imageUrl) {
+                try {
+                    // Fetch image as blob
+                    const response = await fetch(imageUrl);
+                    const blob = await response.blob();
+                    
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `ai-generated-image-${Date.now()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up object URL
+                    URL.revokeObjectURL(link.href);
+                } catch (error) {
+                    console.error('Error downloading image:', error);
+                    // Fallback to simple download
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = `ai-generated-image-${Date.now()}.png`;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            } else {
+                alert('Không có hình ảnh để tải xuống');
             }
         });
     }
