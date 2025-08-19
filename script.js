@@ -12,6 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabContentContent = document.getElementById('tab-content-content');
     const tabChatContent = document.getElementById('tab-chat-content');
 
+    // === Kiểm tra DOM Elements trước khi sử dụng ===
+    if (!tabAdsButton || !tabContentButton || !tabChatButton || 
+        !tabAdsContent || !tabContentContent || !tabChatContent) {
+        console.error('Không tìm thấy các elements tab cần thiết');
+        return;
+    }
+
     // Chat UI Elements
     const chatLoginForm = document.getElementById('chat-login-form');
     const chatLoginInput = document.getElementById('username');
@@ -35,39 +42,54 @@ document.addEventListener('DOMContentLoaded', () => {
     let speechRecognition = null;
 
     // === Tab Switching Logic - Sửa lỗi tab không hoạt động ===
-    function switchTab(tabContent, tabButton) {
+    function switchTab(targetContent, targetButton) {
+        // Kiểm tra null trước khi sử dụng
+        if (!targetContent || !targetButton) {
+            console.error('switchTab: targetContent hoặc targetButton là null');
+            return;
+        }
+
         // Hide all tab content
-        tabAdsContent.classList.remove('active');
-        tabContentContent.classList.remove('active');
-        tabChatContent.classList.remove('active');
+        if (tabAdsContent) tabAdsContent.classList.remove('active');
+        if (tabContentContent) tabContentContent.classList.remove('active');
+        if (tabChatContent) tabChatContent.classList.remove('active');
         
         // Remove active class from all tabs
-        tabAdsButton.classList.remove('active');
-        tabContentButton.classList.remove('active');
-        tabChatButton.classList.remove('active');
+        if (tabAdsButton) tabAdsButton.classList.remove('active');
+        if (tabContentButton) tabContentButton.classList.remove('active');
+        if (tabChatButton) tabChatButton.classList.remove('active');
         
         // Show selected tab content and mark button as active
-        tabContent.classList.add('active');
-        tabButton.classList.add('active');
+        targetContent.classList.add('active');
+        targetButton.classList.add('active');
     }
 
     // Add event listeners to tab buttons
-    tabAdsButton.addEventListener('click', () => {
-        switchTab(tabAdsContent, tabAdsButton);
-    });
+    if (tabAdsButton) {
+        tabAdsButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(tabAdsContent, tabAdsButton);
+        });
+    }
     
-    tabContentButton.addEventListener('click', () => {
-        switchTab(tabContentContent, tabContentButton);
-    });
+    if (tabContentButton) {
+        tabContentButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(tabContentContent, tabContentButton);
+        });
+    }
     
-    tabChatButton.addEventListener('click', () => {
-        switchTab(tabChatContent, tabChatButton);
-        if (currentUserId) {
-            chatLoginContainer.classList.add('hidden');
-            chatInterface.classList.remove('hidden');
-            loadChatHistory(currentUserId);
-        }
-    });
+    if (tabChatButton) {
+        tabChatButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(tabChatContent, tabChatButton);
+            if (currentUserId) {
+                chatLoginContainer.classList.add('hidden');
+                chatInterface.classList.remove('hidden');
+                loadChatHistory(currentUserId);
+            }
+        });
+    }
 
     // Sub-tabs for Content Creation
     const postSubtab = document.getElementById('post-subtab');
@@ -582,16 +604,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === Initialize ===
     // Close the chat interface and show login by default
-    chatInterface.classList.add('hidden');
-    chatLoginContainer.classList.remove('hidden');
+    if (chatInterface) chatInterface.classList.add('hidden');
+    if (chatLoginContainer) chatLoginContainer.classList.remove('hidden');
 
-    // Load default tab content
+    // Load default tab content - Đảm bảo gọi sau khi tất cả elements đã được kiểm tra
     switchTab(tabAdsContent, tabAdsButton);
 
     // If user is already logged in, show chat interface
     if (currentUserId) {
-        chatLoginContainer.classList.add('hidden');
-        chatInterface.classList.remove('hidden');
+        if (chatLoginContainer) chatLoginContainer.classList.add('hidden');
+        if (chatInterface) chatInterface.classList.remove('hidden');
         loadChatHistory(currentUserId);
     }
 });
